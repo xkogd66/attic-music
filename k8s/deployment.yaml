@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: attic-music
+  namespace: webapps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attic-music
+  template:
+    metadata:
+      labels:
+        app: attic-music
+    spec:
+      containers:
+        - name: attic
+          image: ghcr.io/xkogd66/attic-music:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
