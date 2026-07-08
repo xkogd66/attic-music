@@ -1,0 +1,1 @@
+do not assume anything. don't brute force running commands. ask questions.
