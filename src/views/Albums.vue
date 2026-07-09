@@ -212,7 +212,9 @@
               <div class="flex gap-2">
                 <button class="bg-stone-900 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
+                <button v-if="albumLocationPath" class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Show on-disk location" @click="showAlbumLocation = !showAlbumLocation">📁</button>
               </div>
+              <div v-if="showAlbumLocation && albumLocationPath" class="mt-2 text-xs text-stone-400 font-mono break-all">{{ albumLocationPath }}</div>
             </div>
           </div>
           <div class="grid gap-2 text-xs uppercase tracking-widest text-stone-400 px-3 pb-2 border-b border-stone-200 mb-1"
@@ -366,6 +368,13 @@ const recentAlbums   = ref([])
 const discoverAlbums = ref([])
 const currentAlbum = ref(null)
 const albumTracks  = ref([])
+
+const showAlbumLocation = ref(false)
+const albumLocationPath = computed(() => {
+  const path = albumTracks.value[0]?.path
+  if (!path) return null
+  return path.split('/').slice(0, -1).join('/') || null
+})
 const albumDetailCoverSrc   = ref(null)
 const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'
 
@@ -624,6 +633,7 @@ function setupObserver() {
 async function openAlbum(album) {
   loading.value = true
   albumDetailCoverState.value = 'loading'
+  showAlbumLocation.value = false
   router.push({ name: 'album-detail', params: { id: album.id } })
   try {
     const data = await getAlbum(album.id)
@@ -698,6 +708,7 @@ onUnmounted(() => {
 async function openAlbumById(id) {
   loading.value = true
   albumDetailCoverState.value = 'loading'
+  showAlbumLocation.value = false
   router.push({ name: 'album-detail', params: { id } })
   try {
     const data = await getAlbum(id)

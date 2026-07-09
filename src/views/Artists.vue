@@ -320,7 +320,9 @@
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
+                <button v-if="albumLocationPath" class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" title="Show on-disk location" @click="showAlbumLocation = !showAlbumLocation">📁</button>
               </div>
+              <div v-if="showAlbumLocation && albumLocationPath" class="mt-2 text-xs text-stone-400 font-mono break-all">{{ albumLocationPath }}</div>
             </div>
           </div>
 
@@ -567,6 +569,13 @@ const albumTracks   = ref([])
 const albumDetailCoverSrc   = ref(null)
 const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'
 
+const showAlbumLocation = ref(false)
+const albumLocationPath = computed(() => {
+  const path = albumTracks.value[0]?.path
+  if (!path) return null
+  return path.split('/').slice(0, -1).join('/') || null
+})
+
 const coverSearchOpen    = ref(false)
 const coverSearchLoading = ref(false)
 const coverCandidates    = ref([])
@@ -806,6 +815,7 @@ async function uploadArtistAvatar(e) {
 async function openAlbum(album) {
   loading.value = true
   albumDetailCoverState.value = 'loading'
+  showAlbumLocation.value = false
   try {
     const data = await getAlbum(album.id)
     currentAlbum.value = { ...album, ...data.info }
