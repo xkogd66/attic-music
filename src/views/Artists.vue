@@ -284,10 +284,21 @@
         </div>
         <div class="flex items-center gap-2">
           <h1 class="font-serif text-2xl md:text-4xl font-semibold truncate">{{ displayTitle }}</h1>
-          <button class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors" title="Edit album tags" @click="openTagEditor">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z" /></svg>
-            Edit
-          </button>
+          <div class="flex items-center gap-2">
+            <button class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors" title="Edit album tags" @click="openTagEditor">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z" /></svg>
+              Edit
+            </button>
+            <button
+              v-if="albumPath"
+              class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+              title="Show file location"
+              @click="showLocation = !showLocation"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+              Location
+            </button>
+          </div>
         </div>
       </div>
       <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 pb-40 md:pb-24">
@@ -320,10 +331,16 @@
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
-                <button v-if="albumLocationPath" class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" title="Show on-disk location" @click="showAlbumLocation = !showAlbumLocation">📁</button>
               </div>
-              <div v-if="showAlbumLocation && albumLocationPath" class="mt-2 text-xs text-stone-400 font-mono break-all">{{ albumLocationPath }}</div>
             </div>
+          </div>
+
+          <div v-if="showLocation && albumPath" class="mb-6 px-4 py-3 bg-stone-100 rounded-lg border border-stone-200 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] uppercase tracking-widest text-stone-400 font-semibold">On-disk location</span>
+              <button class="text-[10px] text-amber-700 hover:underline" @click="showLocation = false">Close</button>
+            </div>
+            <code class="text-xs text-stone-600 break-all select-all font-mono bg-white p-2 rounded border border-stone-200">{{ albumPath }}</code>
           </div>
 
           <div class="grid gap-2 text-xs uppercase tracking-widest text-stone-400 px-3 pb-2 border-b border-stone-200 mb-1 [grid-template-columns:28px_1fr_44px_56px] md:[grid-template-columns:28px_1fr_1fr_44px_56px]">
@@ -566,15 +583,9 @@ const filteredArtistIndex = computed(() => {
 
 const currentAlbum  = ref(null)
 const albumTracks   = ref([])
+const showLocation  = ref(false)
 const albumDetailCoverSrc   = ref(null)
 const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'
-
-const showAlbumLocation = ref(false)
-const albumLocationPath = computed(() => {
-  const path = albumTracks.value[0]?.path
-  if (!path) return null
-  return path.split('/').slice(0, -1).join('/') || null
-})
 
 const coverSearchOpen    = ref(false)
 const coverSearchLoading = ref(false)
@@ -613,6 +624,15 @@ const displayGenre  = computed(() => {
   if (albumTags.value.genre) return albumTags.value.genre
   try { const g = localStorage.getItem(GENRE_PREFIX + currentAlbum.value?.id); if (g) return g } catch {}
   return currentAlbum.value?.genre || null
+})
+
+const albumPath = computed(() => {
+  const firstTrack = albumTracks.value[0]
+  if (!firstTrack?.path) return ''
+  // Return the directory part of the path
+  const parts = firstTrack.path.split('/')
+  parts.pop() // remove filename
+  return parts.join('/')
 })
 
 const filteredTagGenreList = computed(() => {
@@ -815,7 +835,7 @@ async function uploadArtistAvatar(e) {
 async function openAlbum(album) {
   loading.value = true
   albumDetailCoverState.value = 'loading'
-  showAlbumLocation.value = false
+  showLocation.value = false
   try {
     const data = await getAlbum(album.id)
     currentAlbum.value = { ...album, ...data.info }
@@ -931,6 +951,7 @@ function onImgError(e) {
 async function openArtistById(id) {
   currentArtist.value         = { id, name: '' }
   artistDetailImageUrl.value  = null
+  showLocation.value          = false
   view.value                  = 'artist'
   loadingArtist.value         = true
   try {
