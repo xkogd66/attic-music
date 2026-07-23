@@ -166,7 +166,7 @@
             <div v-if="recentArtists.length" class="pt-5 mb-6">
               <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
               <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-                <div v-for="artist in recentArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:calc(100% / 3 - 8px)" @click="openArtist(artist)">
+                <div v-for="artist in recentArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:28%" @click="openArtist(artist)">
                   <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
                     <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                     <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
@@ -178,7 +178,7 @@
             <div v-if="discoverArtists.length" class="mb-6">
               <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Artists</div>
               <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-                <div v-for="artist in discoverArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:calc(100% / 3 - 8px)" @click="openArtist(artist)">
+                <div v-for="artist in discoverArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:28%" @click="openArtist(artist)">
                   <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
                     <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                     <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />

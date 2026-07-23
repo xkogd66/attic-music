@@ -81,7 +81,7 @@
             <div ref="carousel" class="w-full flex gap-3 overflow-x-auto scroll-smooth" style="scrollbar-width:none;-ms-overflow-style:none" @scroll="onCarouselScroll">
               <div
                 v-for="album in recentAlbums" :key="album.id"
-                class="flex-shrink-0 cursor-pointer group [width:calc(100%_/_3_-_8px)] md:w-36"
+                class="flex-shrink-0 cursor-pointer group [width:28%] md:w-36"
                 @click="openAlbum(album)"
               >
                 <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
@@ -110,7 +110,7 @@
           <div class="w-full flex gap-3 overflow-x-auto" style="scrollbar-width:none;-ms-overflow-style:none">
             <div
               v-for="album in discoverAlbums" :key="album.id"
-              class="flex-shrink-0 cursor-pointer group [width:calc(100%_/_3_-_8px)] md:w-36"
+              class="flex-shrink-0 cursor-pointer group [width:28%] md:w-36"
               @click="openAlbum(album)"
             >
               <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">

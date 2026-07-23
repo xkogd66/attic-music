@@ -13,7 +13,7 @@
           <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
             <div
               v-for="artist in recentArtists" :key="artist.id"
-              class="flex-none cursor-pointer [width:calc(100%_/_3_-_8px)] md:w-36"
+              class="flex-none cursor-pointer [width:28%] md:w-36"
               @click="goToArtist(artist)"
             >
               <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
@@ -31,7 +31,7 @@
           <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
             <div
               v-for="artist in discoverArtists" :key="artist.id"
-              class="flex-none cursor-pointer [width:calc(100%_/_3_-_8px)] md:w-36"
+              class="flex-none cursor-pointer [width:28%] md:w-36"
               @click="goToArtist(artist)"
             >
               <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
@@ -49,7 +49,7 @@
           <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
             <div
               v-for="album in discoverAlbums" :key="album.id"
-              class="flex-none cursor-pointer [width:calc(100%_/_3_-_8px)] md:w-36"
+              class="flex-none cursor-pointer [width:28%] md:w-36"
               @click="goToAlbum(album)"
             >
               <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
