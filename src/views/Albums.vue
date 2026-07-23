@@ -18,7 +18,7 @@
             <div v-if="showGenreDropdown" class="fixed inset-0 z-10" @click="showGenreDropdown = false"></div>
             <button
               class="relative z-20 text-xs border px-2.5 py-1.5 rounded transition-all"
-              :class="filterGenre ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-400 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
+              :class="filterGenre ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
               @click="showGenreDropdown = !showGenreDropdown; showYearDropdown = false"
             >{{ filterGenre || 'Genre' }} ▾</button>
             <div v-if="showGenreDropdown" class="absolute top-full left-0 mt-1 bg-white border border-stone-200 shadow-md rounded z-20 min-w-[130px] max-h-60 overflow-y-auto">
@@ -41,7 +41,7 @@
             <div v-if="showYearDropdown" class="fixed inset-0 z-10" @click="showYearDropdown = false"></div>
             <button
               class="relative z-20 text-xs border px-2.5 py-1.5 rounded transition-all"
-              :class="filterYear ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-400 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
+              :class="filterYear ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
               @click="showYearDropdown = !showYearDropdown; showGenreDropdown = false"
             >{{ filterYear || 'Year' }} ▾</button>
             <div v-if="showYearDropdown" class="absolute top-full left-0 mt-1 bg-white border border-stone-200 shadow-md rounded z-20 min-w-[80px] max-h-60 overflow-y-auto">
@@ -61,7 +61,7 @@
 
           <button
             v-if="filterGenre || filterYear || albumQuery"
-            class="text-xs text-stone-400 hover:text-amber-700 transition-colors"
+            class="text-xs text-stone-600 hover:text-amber-700 transition-colors"
             @click="filterGenre = null; filterYear = null; albumQuery = ''"
           >Clear</button>
         </div>
@@ -71,7 +71,7 @@
         <!-- RECENTLY ADDED CAROUSEL -->
         <div v-if="recentAlbums.length" class="px-4 pt-5 pb-4 border-b border-stone-100"
           :class="{ 'hidden md:block': albumQuery || filterGenre || filterYear }">
-          <div class="text-xs font-medium uppercase tracking-widest text-stone-400 mb-3">Recently Added</div>
+          <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
           <div class="relative">
             <button
               v-if="canScrollLeft"
@@ -81,7 +81,7 @@
             <div ref="carousel" class="w-full flex gap-3 overflow-x-auto scroll-smooth" style="scrollbar-width:none;-ms-overflow-style:none" @scroll="onCarouselScroll">
               <div
                 v-for="album in recentAlbums" :key="album.id"
-                class="flex-shrink-0 cursor-pointer group [width:calc(100%/3-8px)] md:w-36"
+                class="flex-shrink-0 cursor-pointer group [width:calc(100%_/_3_-_8px)] md:w-36"
                 @click="openAlbum(album)"
               >
                 <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
@@ -92,7 +92,7 @@
                   </div>
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-                <div class="text-xs text-stone-400 truncate mt-0.5">{{ album.artist }}</div>
+                <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.artist }}</div>
               </div>
             </div>
             <button
@@ -106,11 +106,11 @@
         <!-- DISCOVER -->
         <div v-if="discoverAlbums.length" class="px-4 pt-5 pb-4 border-b border-stone-100"
           :class="{ 'hidden md:block': albumQuery || filterGenre || filterYear }">
-          <div class="text-xs font-medium uppercase tracking-widest text-stone-400 mb-3">Discover</div>
+          <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover</div>
           <div class="w-full flex gap-3 overflow-x-auto" style="scrollbar-width:none;-ms-overflow-style:none">
             <div
               v-for="album in discoverAlbums" :key="album.id"
-              class="flex-shrink-0 cursor-pointer group [width:calc(100%/3-8px)] md:w-36"
+              class="flex-shrink-0 cursor-pointer group [width:calc(100%_/_3_-_8px)] md:w-36"
               @click="openAlbum(album)"
             >
               <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
@@ -121,7 +121,7 @@
                 </div>
               </div>
               <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-              <div class="text-xs text-stone-400 truncate mt-0.5">{{ album.albumArtist || album.artist }}</div>
+              <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.albumArtist || album.artist }}</div>
             </div>
           </div>
         </div>
@@ -129,12 +129,12 @@
         <!-- ALL ALBUMS GRID -->
         <div class="px-4 py-4"
           :class="{ 'hidden md:block': !albumQuery && !filterGenre && !filterYear }">
-          <div v-if="loading && !albums.length" class="flex items-center justify-center py-24 text-stone-400 text-sm">Loading…</div>
-          <div v-else-if="!albums.length" class="flex flex-col items-center justify-center py-24 text-stone-400 gap-2">
+          <div v-if="loading && !albums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
+          <div v-else-if="!albums.length" class="flex flex-col items-center justify-center py-24 text-stone-600 gap-2">
             <span class="text-4xl">💿</span>
             <span class="font-serif text-lg">No albums found</span>
           </div>
-          <div v-else-if="!filteredAlbums.length" class="flex items-center justify-center py-24 text-stone-400 text-sm">No albums match the filter.</div>
+          <div v-else-if="!filteredAlbums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">No albums match the filter.</div>
           <div v-else class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr))">
             <div
               v-for="album in filteredAlbums" :key="album.id"
@@ -152,13 +152,13 @@
                 </div>
               </div>
               <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-              <div class="text-xs text-stone-400 truncate mt-0.5">
-                <button class="text-stone-400 hover:text-amber-700" @click.stop="openArtistByName(album.artist, $event)">{{ album.artist }}</button>
+              <div class="text-xs text-stone-600 truncate mt-0.5">
+                <button class="text-stone-600 hover:text-amber-700" @click.stop="openArtistByName(album.artist, $event)">{{ album.artist }}</button>
               </div>
             </div>
           </div>
           <div ref="sentinel" class="h-8"></div>
-          <div v-if="loading && albums.length" class="flex items-center justify-center py-4 text-stone-400 text-sm">Loading…</div>
+          <div v-if="loading && albums.length" class="flex items-center justify-center py-4 text-stone-600 text-sm">Loading…</div>
         </div>
 
 
@@ -168,7 +168,7 @@
     <!-- ALBUM DETAIL -->
     <template v-else>
       <div class="px-6 py-6 border-b border-stone-200 bg-white flex-shrink-0">
-        <div class="flex items-center gap-1.5 text-xs text-stone-400 mb-1">
+        <div class="flex items-center gap-1.5 text-xs text-stone-600 mb-1">
           <span class="cursor-pointer hover:text-amber-700 transition-colors" @click="closeAlbum">Albums</span>
           <span class="opacity-40">›</span>
           <span class="truncate">{{ displayTitle }}</span>
@@ -193,7 +193,7 @@
         </div>
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto px-4 py-4 pb-40 md:pb-24">
-        <div v-if="loading" class="flex items-center justify-center py-24 text-stone-400 text-sm">Loading…</div>
+        <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <div v-else>
           <div class="flex gap-4 mb-6 items-end">
             <div class="w-28 h-28 flex-shrink-0 bg-amber-50 overflow-hidden rounded-lg shadow-md relative">
@@ -209,15 +209,15 @@
                 title="Search web for cover art"
                 @click="openCoverSearch"
               >
-                <span class="text-xs text-stone-400 font-medium">Add cover</span>
+                <span class="text-xs text-stone-600 font-medium">Add cover</span>
               </button>
             </div>
             <div class="flex-1 overflow-hidden">
-              <div class="text-xs uppercase tracking-widest text-stone-400 mb-1">
+              <div class="text-xs uppercase tracking-widest text-stone-600 mb-1">
                 {{ ['Album', displayYear].filter(Boolean).join(' · ') }}<span v-if="displayGenre"> · {{ displayGenre }}</span>
               </div>
               <div class="font-serif text-xl font-semibold leading-tight mb-0.5">{{ displayTitle }}</div>
-              <div class="text-sm text-stone-400 mb-3 truncate">
+              <div class="text-sm text-stone-600 mb-3 truncate">
                 <button class="hover:text-amber-700 transition-colors" @click="openArtistByName(displayArtist, $event)">{{ displayArtist }}</button>
               </div>
               <div class="flex gap-2">
@@ -229,13 +229,13 @@
 
           <div v-if="showLocation && albumPath" class="mb-6 px-4 py-3 bg-stone-100 rounded-lg border border-stone-200 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] uppercase tracking-widest text-stone-400 font-semibold">On-disk location</span>
+              <span class="text-[10px] uppercase tracking-widest text-stone-600 font-semibold">On-disk location</span>
               <button class="text-[10px] text-amber-700 hover:underline" @click="showLocation = false">Close</button>
             </div>
             <code class="text-xs text-stone-600 break-all select-all font-mono bg-white p-2 rounded border border-stone-200">{{ albumPath }}</code>
           </div>
 
-          <div class="grid gap-2 text-xs uppercase tracking-widest text-stone-400 px-3 pb-2 border-b border-stone-200 mb-1"
+          <div class="grid gap-2 text-xs uppercase tracking-widest text-stone-600 px-3 pb-2 border-b border-stone-200 mb-1"
             style="grid-template-columns: 28px 1fr 44px 56px">
             <span class="text-center">#</span><span>Title</span><span>Time</span><span></span>
           </div>
@@ -261,23 +261,23 @@
           </div>
           <div class="px-6 py-5 space-y-4">
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Title</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Title</label>
               <input v-model="tagEdits.title" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="Album title…" />
             </div>
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Artist</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Artist</label>
               <input v-model="tagEdits.artist" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="Artist…" />
             </div>
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Album Artist</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Album Artist</label>
               <input v-model="tagEdits.albumArtist" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="Album artist…" />
             </div>
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Year</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Year</label>
               <input v-model="tagEdits.year" type="text" inputmode="numeric" maxlength="4" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="e.g. 1994" />
             </div>
             <div class="relative">
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Genre</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Genre</label>
               <input v-model="tagEdits.genre"
                 class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors"
                 placeholder="Genre…"
@@ -294,7 +294,7 @@
           </div>
           <div class="px-6 py-4 border-t border-stone-200 flex justify-end items-center gap-3">
             <span v-if="tagSaveError" class="text-xs text-red-500 mr-auto">{{ tagSaveError }}</span>
-            <button class="text-sm text-stone-400 hover:text-stone-600 transition-colors disabled:opacity-50" :disabled="tagSaving" @click="closeTagEditor">Cancel</button>
+            <button class="text-sm text-stone-600 hover:text-stone-800 transition-colors disabled:opacity-50" :disabled="tagSaving" @click="closeTagEditor">Cancel</button>
             <button class="bg-stone-900 text-white text-sm px-5 py-1.5 hover:bg-amber-700 transition-colors disabled:opacity-50" :disabled="tagSaving" @click="saveTagEdits">{{ tagSaving ? 'Saving…' : 'Save' }}</button>
           </div>
         </div>
@@ -310,21 +310,21 @@
           </div>
           <div class="px-6 py-5 space-y-4">
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Title</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Title</label>
               <input v-model="trackEdits.title" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="Track title…" />
             </div>
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Artist</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Artist</label>
               <input v-model="trackEdits.artist" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="Track artist…" />
             </div>
             <div>
-              <label class="block text-xs uppercase tracking-widest text-stone-400 mb-1.5">Track #</label>
+              <label class="block text-xs uppercase tracking-widest text-stone-600 mb-1.5">Track #</label>
               <input v-model="trackEdits.track" type="number" class="w-full border-b border-stone-300 py-1 text-sm bg-transparent outline-none focus:border-amber-700 transition-colors" placeholder="e.g. 3" />
             </div>
           </div>
           <div class="px-6 py-4 border-t border-stone-200 flex justify-end items-center gap-3">
             <span v-if="trackSaveError" class="text-xs text-red-500 mr-auto">{{ trackSaveError }}</span>
-            <button class="text-sm text-stone-400 hover:text-stone-600 transition-colors disabled:opacity-50" :disabled="trackSaving" @click="closeTrackEditor">Cancel</button>
+            <button class="text-sm text-stone-600 hover:text-stone-800 transition-colors disabled:opacity-50" :disabled="trackSaving" @click="closeTrackEditor">Cancel</button>
             <button class="bg-stone-900 text-white text-sm px-5 py-1.5 hover:bg-amber-700 transition-colors disabled:opacity-50" :disabled="trackSaving" @click="saveTrackEdits">{{ trackSaving ? 'Saving…' : 'Save' }}</button>
           </div>
         </div>
@@ -335,11 +335,11 @@
         <div class="bg-white w-full max-w-md shadow-xl rounded-xl flex flex-col max-h-[80vh]">
           <div class="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
             <h3 class="font-serif text-lg font-semibold">Pick a cover</h3>
-            <button class="text-stone-400 hover:text-stone-700" @click="closeCoverSearch">✕</button>
+            <button class="text-stone-600 hover:text-stone-900" @click="closeCoverSearch">✕</button>
           </div>
           <div class="px-5 py-4 overflow-y-auto">
-            <div v-if="coverSearchLoading" class="py-10 text-center text-stone-400 text-sm">Searching…</div>
-            <div v-else-if="!coverCandidates.length" class="py-10 text-center text-stone-400 text-sm">No covers found.</div>
+            <div v-if="coverSearchLoading" class="py-10 text-center text-stone-600 text-sm">Searching…</div>
+            <div v-else-if="!coverCandidates.length" class="py-10 text-center text-stone-600 text-sm">No covers found.</div>
             <div v-else class="grid grid-cols-3 gap-3">
               <button v-for="(c, i) in coverCandidates" :key="i"
                 class="relative aspect-square rounded-lg overflow-hidden border border-stone-200 hover:border-amber-600 focus:border-amber-600 disabled:opacity-40 transition-colors"

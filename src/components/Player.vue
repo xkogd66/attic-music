@@ -10,7 +10,7 @@
       </div>
       <div class="overflow-hidden">
         <div class="text-sm font-medium truncate">{{ player.currentTrack?.title || '—' }}</div>
-        <div class="text-xs text-stone-400 truncate">
+        <div class="text-xs text-stone-600 truncate">
           {{ player.currentTrack?.artist || '' }}
           <span v-if="player.currentTrack?.album"> · {{ player.currentTrack.album }}</span>
         </div>
@@ -24,7 +24,7 @@
           <button class="ctrl" :class="{ 'text-amber-700': player.shuffle }" @click="player.shuffle = !player.shuffle">
             <Shuffle :size="16" />
           </button>
-          <span class="text-[9px] uppercase tracking-widest" :class="player.shuffle ? 'text-amber-700' : 'text-stone-300'">shuffle</span>
+          <span class="text-[9px] uppercase tracking-widest" :class="player.shuffle ? 'text-amber-700' : 'text-stone-500'">shuffle</span>
         </div>
         <button class="ctrl" @click="player.prevTrack()"><SkipBack :size="18" /></button>
         <button
@@ -39,13 +39,13 @@
           <button class="ctrl" :class="{ 'text-amber-700': player.repeat }" @click="player.repeat = !player.repeat">
             <Repeat :size="16" />
           </button>
-          <span class="text-[9px] uppercase tracking-widest" :class="player.repeat ? 'text-amber-700' : 'text-stone-300'">repeat</span>
+          <span class="text-[9px] uppercase tracking-widest" :class="player.repeat ? 'text-amber-700' : 'text-stone-500'">repeat</span>
         </div>
       </div>
 
       <!-- PROGRESS -->
       <div class="flex items-center gap-2 w-full max-w-lg">
-        <span class="text-xs text-stone-400 w-9 flex-shrink-0 tabular-nums">{{ player.fmt(player.currentTime) }}</span>
+        <span class="text-xs text-stone-600 w-9 flex-shrink-0 tabular-nums">{{ player.fmt(player.currentTime) }}</span>
         <div
           ref="progressEl"
           class="flex-1 h-0.5 bg-stone-200 rounded cursor-pointer group"
@@ -53,7 +53,7 @@
         >
           <div class="h-full bg-stone-900 rounded group-hover:bg-amber-700 transition-colors" :style="{ width: player.progressPct + '%' }"></div>
         </div>
-        <span class="text-xs text-stone-400 w-9 flex-shrink-0 text-right tabular-nums">{{ player.fmt(player.duration) }}</span>
+        <span class="text-xs text-stone-600 w-9 flex-shrink-0 text-right tabular-nums">{{ player.fmt(player.duration) }}</span>
       </div>
     </div>
 
@@ -72,12 +72,12 @@
         class="w-20 cursor-pointer [accent-color:var(--accent)]"
       />
       <button
-        class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-400 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all"
+        class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all"
         :class="{ 'border-amber-700 text-amber-700 bg-amber-50': showLyrics }"
         @click="toggleLyrics"
       >Lyrics</button>
       <button
-        class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-400 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all"
+        class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all"
         :class="{ 'border-amber-700 text-amber-700 bg-amber-50': showQueue }"
         @click="showQueue = !showQueue; showLyrics = false"
       >
@@ -92,9 +92,9 @@
           <span class="text-xs font-medium uppercase tracking-widest">Lyrics</span>
         </div>
         <div class="overflow-y-auto flex-1 px-4 py-3" ref="lyricsEl">
-          <div v-if="lyricsLoading" class="text-xs text-stone-300 text-center py-8">Loading…</div>
+          <div v-if="lyricsLoading" class="text-xs text-stone-500 text-center py-8">Loading…</div>
           <template v-else-if="!lyrics">
-            <div class="text-xs text-stone-300 text-center pt-8 pb-3">No lyrics found</div>
+            <div class="text-xs text-stone-500 text-center pt-8 pb-3">No lyrics found</div>
             <template v-if="addingLyrics">
               <textarea
                 v-model="manualLyricsText"
@@ -105,11 +105,11 @@
               ></textarea>
               <div class="flex gap-3 mt-2">
                 <button class="text-xs text-amber-700 font-medium hover:text-amber-800 transition-colors" @click="saveLyricsManually">Save</button>
-                <button class="text-xs text-stone-400 hover:text-stone-600 transition-colors" @click="addingLyrics = false; manualLyricsText = ''">Cancel</button>
+                <button class="text-xs text-stone-600 hover:text-stone-800 transition-colors" @click="addingLyrics = false; manualLyricsText = ''">Cancel</button>
               </div>
             </template>
             <div v-else class="text-center">
-              <button class="text-xs text-stone-400 hover:text-amber-700 transition-colors" @click="addingLyrics = true">+ Add lyrics manually</button>
+              <button class="text-xs text-stone-600 hover:text-amber-700 transition-colors" @click="addingLyrics = true">+ Add lyrics manually</button>
             </div>
           </template>
           <template v-else-if="lyrics.synced">
@@ -118,7 +118,7 @@
               :key="i"
               :ref="el => { if (el) lineEls[i] = el }"
               class="text-sm leading-relaxed py-0.5 transition-all duration-300"
-              :class="i === activeLine ? 'text-stone-900 font-semibold' : 'text-stone-300'"
+              :class="i === activeLine ? 'text-stone-900 font-semibold' : 'text-stone-500'"
             >{{ line.text }}</p>
           </template>
           <p v-else class="text-sm text-stone-500 leading-relaxed whitespace-pre-wrap">{{ lyrics.plain }}</p>
@@ -142,11 +142,11 @@
                 @keydown.esc="savingPlaylist = false"
               />
               <button class="text-xs text-amber-700 hover:text-amber-800 transition-colors font-medium" @click="savePlaylist">Save</button>
-              <button class="text-xs text-stone-400 hover:text-stone-600 transition-colors" @click="savingPlaylist = false">✕</button>
+              <button class="text-xs text-stone-600 hover:text-stone-800 transition-colors" @click="savingPlaylist = false">✕</button>
             </template>
             <template v-else>
-              <button class="text-xs text-stone-400 hover:text-amber-700 transition-colors" @click="startSavePlaylist" title="Save queue as playlist">+ Playlist</button>
-              <button class="text-xs text-stone-400 hover:text-amber-700 transition-colors" @click="player.clearQueue()">Clear</button>
+              <button class="text-xs text-stone-600 hover:text-amber-700 transition-colors" @click="startSavePlaylist" title="Save queue as playlist">+ Playlist</button>
+              <button class="text-xs text-stone-600 hover:text-amber-700 transition-colors" @click="player.clearQueue()">Clear</button>
             </template>
           </div>
         </div>
@@ -157,12 +157,12 @@
             :class="{ 'text-amber-700': i === player.currentIndex }"
             @click="player.jumpToQueue(i)"
           >
-            <span class="text-xs text-stone-400 w-4 text-right flex-shrink-0">{{ i + 1 }}</span>
+            <span class="text-xs text-stone-600 w-4 text-right flex-shrink-0">{{ i + 1 }}</span>
             <div class="flex-1 overflow-hidden">
               <div class="text-xs font-medium truncate">{{ track.title }}</div>
-              <div class="text-xs text-stone-400 truncate">{{ track.artist }}</div>
+              <div class="text-xs text-stone-600 truncate">{{ track.artist }}</div>
             </div>
-            <span class="text-xs text-stone-300 flex-shrink-0">{{ player.fmt(track.duration) }}</span>
+            <span class="text-xs text-stone-500 flex-shrink-0">{{ player.fmt(track.duration) }}</span>
           </div>
         </div>
       </div>
@@ -278,7 +278,7 @@ async function savePlaylist() {
 @reference "../style.css";
 
 .ctrl {
-  @apply text-stone-400 hover:text-stone-900 transition-colors cursor-pointer bg-transparent border-none text-base leading-none p-1;
+  @apply text-stone-600 hover:text-stone-900 transition-colors cursor-pointer bg-transparent border-none text-base leading-none p-1;
 }
 .queue-enter-active, .queue-leave-active { transition: opacity 0.15s, transform 0.15s; }
 .queue-enter-from, .queue-leave-to { opacity: 0; transform: translateY(8px); }

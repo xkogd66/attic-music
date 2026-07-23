@@ -4,13 +4,13 @@
 
       <!-- HEADER -->
       <div class="flex items-center justify-between px-6 pt-12 pb-4 flex-shrink-0">
-        <button class="text-stone-400 active:text-amber-700 p-2 -ml-2" @click="emit('collapse')">
+        <button class="text-stone-600 active:text-amber-700 p-2 -ml-2" @click="emit('collapse')">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-        <span class="text-xs font-medium uppercase tracking-widest text-stone-400">Now Playing</span>
-        <button class="text-stone-400 active:text-amber-700 p-2 -mr-2" @click="showQueue = !showQueue">
+        <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Now Playing</span>
+        <button class="text-stone-600 active:text-amber-700 p-2 -mr-2" @click="showQueue = !showQueue">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h10" />
           </svg>
@@ -22,19 +22,19 @@
 
         <!-- QUEUE VIEW -->
         <div v-if="showQueue" class="flex-1 overflow-y-auto">
-          <div class="text-xs font-medium uppercase tracking-widest text-stone-400 mb-4">Queue ({{ player.queue.length }})</div>
+          <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-4">Queue ({{ player.queue.length }})</div>
           <div
             v-for="(track, i) in player.queue" :key="i"
             class="flex items-center gap-3 py-3 border-b border-stone-100 last:border-0 cursor-pointer active:bg-stone-100 rounded px-2 -mx-2"
             :class="{ 'text-amber-700': i === player.currentIndex }"
             @click="player.jumpToQueue(i)"
           >
-            <span class="text-xs text-stone-300 w-5 text-right flex-shrink-0">{{ i + 1 }}</span>
+            <span class="text-xs text-stone-500 w-5 text-right flex-shrink-0">{{ i + 1 }}</span>
             <div class="flex-1 overflow-hidden">
               <div class="text-sm font-medium truncate">{{ track.title }}</div>
-              <div class="text-xs text-stone-400 truncate">{{ track.artist }}</div>
+              <div class="text-xs text-stone-600 truncate">{{ track.artist }}</div>
             </div>
-            <span class="text-xs text-stone-300 flex-shrink-0">{{ player.fmt(track.duration) }}</span>
+            <span class="text-xs text-stone-500 flex-shrink-0">{{ player.fmt(track.duration) }}</span>
           </div>
         </div>
 
@@ -58,21 +58,21 @@
           <div class="flex justify-center gap-1 mt-2 mb-1 flex-shrink-0">
             <button
               class="px-4 py-1 rounded-full text-xs font-medium transition-colors"
-              :class="lyricsView ? 'bg-stone-100 text-stone-400' : 'bg-stone-900 text-white'"
+              :class="lyricsView ? 'bg-stone-100 text-stone-600' : 'bg-stone-900 text-white'"
               @click="lyricsView = false"
             >Art</button>
             <button
               class="px-4 py-1 rounded-full text-xs font-medium transition-colors"
-              :class="lyricsView ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400'"
+              :class="lyricsView ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'"
               @click="openLyrics"
             >Lyrics</button>
           </div>
 
           <!-- LYRICS PANEL -->
           <div v-if="lyricsView" class="flex-1 overflow-y-auto py-2" ref="lyricsEl">
-            <div v-if="lyricsLoading" class="flex items-center justify-center h-full text-stone-300 text-sm">Loading…</div>
+            <div v-if="lyricsLoading" class="flex items-center justify-center h-full text-stone-500 text-sm">Loading…</div>
             <template v-else-if="!lyrics">
-              <div class="text-stone-300 text-sm text-center pt-12 pb-4">No lyrics found</div>
+              <div class="text-stone-500 text-sm text-center pt-12 pb-4">No lyrics found</div>
               <template v-if="addingLyrics">
                 <textarea
                   v-model="manualLyricsText"
@@ -82,11 +82,11 @@
                 ></textarea>
                 <div class="flex gap-4 mt-3">
                   <button class="text-sm text-amber-700 font-medium" @click="saveLyricsManually">Save</button>
-                  <button class="text-sm text-stone-400" @click="addingLyrics = false; manualLyricsText = ''">Cancel</button>
+                  <button class="text-sm text-stone-600" @click="addingLyrics = false; manualLyricsText = ''">Cancel</button>
                 </div>
               </template>
               <div v-else class="text-center">
-                <button class="text-sm text-stone-400 hover:text-amber-700 transition-colors" @click="addingLyrics = true">+ Add lyrics manually</button>
+                <button class="text-sm text-stone-600 hover:text-amber-700 transition-colors" @click="addingLyrics = true">+ Add lyrics manually</button>
               </div>
             </template>
             <template v-else-if="lyrics.synced">
@@ -95,7 +95,7 @@
                 :key="i"
                 :ref="el => { if (el) lineEls[i] = el }"
                 class="text-center py-1 text-sm leading-relaxed transition-all duration-300"
-                :class="i === activeLine ? 'text-stone-900 font-semibold text-base' : 'text-stone-300'"
+                :class="i === activeLine ? 'text-stone-900 font-semibold text-base' : 'text-stone-500'"
               >{{ line.text }}</p>
             </template>
             <p v-else class="text-sm text-stone-500 leading-relaxed whitespace-pre-wrap text-center">{{ lyrics.plain }}</p>
@@ -104,7 +104,7 @@
           <!-- TRACK INFO -->
           <div class="flex-shrink-0 mb-3">
             <div class="text-2xl font-semibold truncate">{{ player.currentTrack?.title }}</div>
-            <div class="text-base text-stone-400 truncate mt-0.5">{{ player.currentTrack?.artist }}</div>
+            <div class="text-base text-stone-600 truncate mt-0.5">{{ player.currentTrack?.artist }}</div>
           </div>
 
           <!-- PROGRESS -->
@@ -116,7 +116,7 @@
             >
               <div class="h-full bg-stone-900 rounded-full" :style="{ width: player.progressPct + '%' }"></div>
             </div>
-            <div class="flex justify-between text-xs text-stone-400 tabular-nums">
+            <div class="flex justify-between text-xs text-stone-600 tabular-nums">
               <span>{{ player.fmt(player.currentTime) }}</span>
               <span>{{ player.fmt(player.duration) }}</span>
             </div>
@@ -124,7 +124,7 @@
 
           <!-- VOLUME -->
           <div class="flex-shrink-0 flex items-center gap-3 mb-4">
-            <button class="text-stone-400 active:text-amber-700 p-1" @click="player.toggleMute()">
+            <button class="text-stone-600 active:text-amber-700 p-1" @click="player.toggleMute()">
               <VolumeX v-if="player.volume === 0" :size="20" />
               <Volume1 v-else-if="player.volume < 0.5" :size="20" />
               <Volume2 v-else :size="20" />
@@ -143,10 +143,10 @@
               <div class="flex flex-col items-center gap-1">
                 <button
                   class="p-2 transition-colors"
-                  :class="player.shuffle ? 'text-amber-700' : 'text-stone-300'"
+                  :class="player.shuffle ? 'text-amber-700' : 'text-stone-500'"
                   @click="player.shuffle = !player.shuffle"
                 ><Shuffle :size="22" /></button>
-                <span class="text-[10px] uppercase tracking-wide" :class="player.shuffle ? 'text-amber-700' : 'text-stone-300'">shuffle</span>
+                <span class="text-[10px] uppercase tracking-wide" :class="player.shuffle ? 'text-amber-700' : 'text-stone-500'">shuffle</span>
               </div>
               <button class="p-2 text-stone-700 active:text-amber-700" @click="player.prevTrack()">
                 <SkipBack :size="32" />
@@ -164,10 +164,10 @@
               <div class="flex flex-col items-center gap-1">
                 <button
                   class="p-2 transition-colors"
-                  :class="player.repeat ? 'text-amber-700' : 'text-stone-300'"
+                  :class="player.repeat ? 'text-amber-700' : 'text-stone-500'"
                   @click="player.repeat = !player.repeat"
                 ><Repeat :size="22" /></button>
-                <span class="text-[10px] uppercase tracking-wide" :class="player.repeat ? 'text-amber-700' : 'text-stone-300'">repeat</span>
+                <span class="text-[10px] uppercase tracking-wide" :class="player.repeat ? 'text-amber-700' : 'text-stone-500'">repeat</span>
               </div>
             </div>
           </div>

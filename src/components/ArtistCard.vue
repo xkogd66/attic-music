@@ -9,12 +9,12 @@
         class="w-full h-full object-cover"
         @error="onImgError"
       />
-      <div v-else class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-300 select-none">
+      <div v-else class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">
         {{ artist.name[0]?.toUpperCase() }}
       </div>
     </div>
     <div class="text-sm font-medium truncate leading-tight">{{ artist.name }}</div>
-    <div v-if="artist.albumCount" class="text-xs text-stone-400 mt-0.5">
+    <div v-if="artist.albumCount" class="text-xs text-stone-600 mt-0.5">
       {{ artist.albumCount }} album{{ artist.albumCount !== 1 ? 's' : '' }}
     </div>
   </div>

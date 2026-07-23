@@ -15,17 +15,17 @@
             @keydown.esc="creating = false"
           />
           <button class="text-xs text-amber-700 hover:text-amber-800 font-medium transition-colors" @click="createNew">Create</button>
-          <button class="text-xs text-stone-400 hover:text-stone-600 transition-colors" @click="creating = false">✕</button>
+          <button class="text-xs text-stone-600 hover:text-stone-800 transition-colors" @click="creating = false">✕</button>
         </div>
         <button
           v-else
-          class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-400 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all flex-shrink-0"
+          class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all flex-shrink-0"
           @click="startCreating"
         >+ New</button>
       </div>
       <div class="flex-1 overflow-y-auto px-4 py-4 pb-40 md:pb-24">
-        <div v-if="loading" class="flex items-center justify-center py-24 text-stone-400 text-sm">Loading…</div>
-        <div v-else-if="!playlists.length" class="flex flex-col items-center justify-center py-24 text-stone-400 gap-2">
+        <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
+        <div v-else-if="!playlists.length" class="flex flex-col items-center justify-center py-24 text-stone-600 gap-2">
           <span class="text-4xl">📋</span>
           <span class="font-serif text-lg">No playlists yet</span>
           <span class="text-sm">Save your queue as a playlist from the player</span>
@@ -47,7 +47,7 @@
               </div>
             </div>
             <div class="text-xs font-medium truncate leading-tight">{{ pl.name }}</div>
-            <div class="text-xs text-stone-400 mt-0.5">{{ pl.songCount }} track{{ pl.songCount !== 1 ? 's' : '' }}</div>
+            <div class="text-xs text-stone-600 mt-0.5">{{ pl.songCount }} track{{ pl.songCount !== 1 ? 's' : '' }}</div>
           </div>
         </div>
       </div>
@@ -56,7 +56,7 @@
     <!-- PLAYLIST DETAIL -->
     <template v-else>
       <div class="px-6 py-6 border-b border-stone-200 bg-white flex-shrink-0">
-        <div class="flex items-center gap-1.5 text-xs text-stone-400 mb-1">
+        <div class="flex items-center gap-1.5 text-xs text-stone-600 mb-1">
           <span class="cursor-pointer hover:text-amber-700 transition-colors" @click="closePlaylist">Playlists</span>
           <span class="opacity-40">›</span>
           <span class="truncate">{{ currentPlaylist.name }}</span>
@@ -64,7 +64,7 @@
         <h1 class="font-serif text-3xl font-semibold">{{ currentPlaylist.name }}</h1>
       </div>
       <div class="flex-1 overflow-y-auto px-4 py-4 pb-40 md:pb-24">
-        <div v-if="loading" class="flex items-center justify-center py-24 text-stone-400 text-sm">Loading…</div>
+        <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <div v-else>
           <div class="flex gap-4 mb-6 items-end">
             <div class="w-28 h-28 flex-shrink-0 bg-amber-50 overflow-hidden rounded-lg shadow-md">
@@ -72,7 +72,7 @@
               <div v-else class="w-full h-full flex items-center justify-center text-4xl">📋</div>
             </div>
             <div class="flex-1 overflow-hidden">
-              <div class="text-xs uppercase tracking-widest text-stone-400 mb-1">
+              <div class="text-xs uppercase tracking-widest text-stone-600 mb-1">
                 Playlist · {{ playlistTracks.length }} tracks
               </div>
               <div class="font-serif text-xl font-semibold leading-tight mb-3">{{ currentPlaylist.name }}</div>
@@ -84,9 +84,9 @@
             </div>
           </div>
 
-          <div v-if="!playlistTracks.length" class="text-sm text-stone-400 py-8 text-center">This playlist is empty</div>
+          <div v-if="!playlistTracks.length" class="text-sm text-stone-600 py-8 text-center">This playlist is empty</div>
           <template v-else>
-            <div class="grid gap-2 text-xs uppercase tracking-widest text-stone-400 px-3 pb-2 border-b border-stone-200 mb-1 [grid-template-columns:28px_1fr_44px_28px] md:[grid-template-columns:28px_1fr_1fr_44px_28px]">
+            <div class="grid gap-2 text-xs uppercase tracking-widest text-stone-600 px-3 pb-2 border-b border-stone-200 mb-1 [grid-template-columns:28px_1fr_44px_28px] md:[grid-template-columns:28px_1fr_1fr_44px_28px]">
               <span class="text-center">#</span><span>Title</span><span class="hidden md:block">Artist</span><span>Time</span><span></span>
             </div>
             <TrackItem

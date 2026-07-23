@@ -4,7 +4,7 @@
       v-for="item in navItems" :key="item.to"
       :to="item.to"
       class="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition-colors"
-      :class="isActive(item.to) ? 'text-amber-700' : 'text-stone-400'"
+      :class="isActive(item.to) ? 'text-amber-700' : 'text-stone-600'"
     >
       <component :is="item.icon" :size="22" />
       <span class="text-[10px] font-medium">{{ item.label }}</span>

@@ -4,28 +4,28 @@
     :class="{ 'text-amber-700': isPlaying }"
     @click="emit('play')"
   >
-    <div class="text-xs text-stone-400 text-center">
+    <div class="text-xs text-stone-600 text-center">
       <span v-if="isPlaying">♪</span>
       <span v-else>{{ removable ? index + 1 : (track.track || index + 1) }}</span>
     </div>
     <div class="min-w-0">
       <div class="truncate font-medium text-sm">{{ track.title }}</div>
-      <div v-if="track.artist" class="truncate text-xs text-stone-400 mt-0.5 md:hidden">{{ track.artist }}</div>
+      <div v-if="track.artist" class="truncate text-xs text-stone-600 mt-0.5 md:hidden">{{ track.artist }}</div>
     </div>
-    <div class="hidden md:block truncate text-sm text-stone-400">{{ track.artist }}</div>
-    <div class="text-xs text-stone-400 text-right">{{ fmt(track.duration) }}</div>
+    <div class="hidden md:block truncate text-sm text-stone-600">{{ track.artist }}</div>
+    <div class="text-xs text-stone-600 text-right">{{ fmt(track.duration) }}</div>
 
     <div class="relative justify-self-end flex items-center gap-2">
       <button
         v-if="editable"
-        class="text-stone-400 hover:text-amber-700 active:text-amber-700 transition-colors"
+        class="text-stone-600 hover:text-amber-700 active:text-amber-700 transition-colors"
         @click.stop="editTags"
         title="Edit track tags"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z" /></svg>
       </button>
       <button
-        class="text-stone-400 hover:text-amber-700 active:text-amber-700 transition-colors bg-transparent border-none text-lg leading-none"
+        class="text-stone-600 hover:text-amber-700 active:text-amber-700 transition-colors bg-transparent border-none text-lg leading-none"
         @click.stop="toggleMenu"
         title="Add to playlist"
       >+</button>
@@ -34,8 +34,8 @@
         v-if="menuOpen"
         class="absolute right-0 top-full mt-1 z-50 bg-white border border-stone-200 rounded-lg shadow-lg py-1 w-44"
       >
-        <div class="px-3 py-1.5 text-xs text-stone-400 uppercase tracking-wider border-b border-stone-100">Add to playlist</div>
-        <div v-if="!plStore.playlists.length" class="px-3 py-2 text-xs text-stone-400 italic">No playlists</div>
+        <div class="px-3 py-1.5 text-xs text-stone-600 uppercase tracking-wider border-b border-stone-100">Add to playlist</div>
+        <div v-if="!plStore.playlists.length" class="px-3 py-2 text-xs text-stone-600 italic">No playlists</div>
         <button
           v-for="pl in plStore.playlists"
           :key="pl.id"

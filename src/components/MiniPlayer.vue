@@ -19,13 +19,13 @@
     <!-- TRACK INFO -->
     <div class="flex-1 overflow-hidden">
       <div class="text-sm font-medium truncate leading-tight">{{ player.currentTrack.title }}</div>
-      <div class="text-xs text-stone-400 truncate mt-0.5">{{ player.currentTrack.artist }}</div>
+      <div class="text-xs text-stone-600 truncate mt-0.5">{{ player.currentTrack.artist }}</div>
     </div>
 
     <!-- CONTROLS -->
     <div class="flex items-center gap-1 flex-shrink-0">
       <button
-        class="w-9 h-9 flex items-center justify-center text-stone-400 active:text-amber-700"
+        class="w-9 h-9 flex items-center justify-center text-stone-600 active:text-amber-700"
         @click.stop="player.prevTrack()"
       >
         <SkipBack :size="18" />
@@ -38,7 +38,7 @@
         <Play v-else :size="22" class="translate-x-px" />
       </button>
       <button
-        class="w-9 h-9 flex items-center justify-center text-stone-400 active:text-amber-700"
+        class="w-9 h-9 flex items-center justify-center text-stone-600 active:text-amber-700"
         @click.stop="player.nextTrack()"
       >
         <SkipForward :size="18" />

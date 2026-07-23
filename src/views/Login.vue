@@ -2,19 +2,19 @@
   <div class="h-screen flex items-center justify-center bg-stone-50">
     <div class="w-96 bg-white border border-stone-200 p-12">
       <h1 class="font-serif text-5xl font-semibold mb-1">attic music</h1>
-      <p class="text-stone-400 text-sm mb-8">a client for subsonic</p>
+      <p class="text-stone-600 text-sm mb-8">a client for subsonic</p>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-medium uppercase tracking-widest text-stone-400 mb-1.5">Server URL</label>
+          <label class="block text-xs font-medium uppercase tracking-widest text-stone-600 mb-1.5">Server URL</label>
           <input v-model="form.server" class="input" placeholder="https://gonic.example.com" @keyup.enter="login" />
         </div>
         <div>
-          <label class="block text-xs font-medium uppercase tracking-widest text-stone-400 mb-1.5">Username</label>
+          <label class="block text-xs font-medium uppercase tracking-widest text-stone-600 mb-1.5">Username</label>
           <input v-model="form.username" class="input" autocomplete="username" @keyup.enter="login" />
         </div>
         <div>
-          <label class="block text-xs font-medium uppercase tracking-widest text-stone-400 mb-1.5">Password</label>
+          <label class="block text-xs font-medium uppercase tracking-widest text-stone-600 mb-1.5">Password</label>
           <input v-model="form.password" type="password" class="input" autocomplete="current-password" @keyup.enter="login" />
         </div>
       </div>

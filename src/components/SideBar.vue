@@ -4,12 +4,12 @@
     <!-- HEADER -->
     <div class="px-6 py-7 border-b border-stone-200 flex-shrink-0">
       <div class="font-serif text-2xl font-semibold">attic player</div>
-      <div class="text-xs text-stone-400 mt-0.5 truncate">{{ config.server }}</div>
+      <div class="text-xs text-stone-600 mt-0.5 truncate">{{ config.server }}</div>
     </div>
 
     <!-- NAV -->
     <nav class="p-4 flex-shrink-0">
-      <div class="text-xs font-medium uppercase tracking-widest text-stone-400 px-2 py-2">Library</div>
+      <div class="text-xs font-medium uppercase tracking-widest text-stone-600 px-2 py-2">Library</div>
       <RouterLink
         v-for="item in navItems" :key="item.to"
         :to="item.to"
@@ -34,7 +34,7 @@
         />
         <button
           v-if="query"
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs leading-none"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-800 text-xs leading-none"
           @click="clear"
         >✕</button>
       </div>
@@ -44,7 +44,7 @@
         class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
       >
         <template v-if="results.artists.length">
-          <div class="px-3 py-1.5 text-xs text-stone-400 uppercase tracking-wider border-b border-stone-100">Artists</div>
+          <div class="px-3 py-1.5 text-xs text-stone-600 uppercase tracking-wider border-b border-stone-100">Artists</div>
           <button
             v-for="artist in results.artists"
             :key="artist.id"
@@ -54,7 +54,7 @@
         </template>
         <template v-if="results.albums.length">
           <div
-            class="px-3 py-1.5 text-xs text-stone-400 uppercase tracking-wider border-b border-stone-100"
+            class="px-3 py-1.5 text-xs text-stone-600 uppercase tracking-wider border-b border-stone-100"
             :class="{ 'border-t border-stone-100': results.artists.length }"
           >Albums</div>
           <button
@@ -64,12 +64,12 @@
             @click="goAlbum(album)"
           >
             <div class="truncate">{{ album.name }}</div>
-            <div class="text-xs text-stone-400 truncate">{{ album.artist }}</div>
+            <div class="text-xs text-stone-600 truncate">{{ album.artist }}</div>
           </button>
         </template>
         <template v-if="results.songs.length">
           <div
-            class="px-3 py-1.5 text-xs text-stone-400 uppercase tracking-wider border-b border-stone-100"
+            class="px-3 py-1.5 text-xs text-stone-600 uppercase tracking-wider border-b border-stone-100"
             :class="{ 'border-t border-stone-100': results.artists.length || results.albums.length }"
           >Tracks</div>
           <button
@@ -79,14 +79,14 @@
             @click="playSong(song)"
           >
             <div class="truncate">{{ song.title }}</div>
-            <div class="text-xs text-stone-400 truncate">{{ song.artist }} · {{ song.album }}</div>
+            <div class="text-xs text-stone-600 truncate">{{ song.artist }} · {{ song.album }}</div>
           </button>
         </template>
       </div>
 
       <div
         v-else-if="query && results"
-        class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg px-3 py-3 text-sm text-stone-400"
+        class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg px-3 py-3 text-sm text-stone-600"
       >No results</div>
     </div>
 
@@ -95,7 +95,7 @@
 
     <!-- FOOTER -->
     <div class="px-6 py-4 border-t border-stone-200 flex-shrink-0">
-      <button class="text-xs text-stone-400 hover:text-amber-700 transition-colors" @click="logout">
+      <button class="text-xs text-stone-600 hover:text-amber-700 transition-colors" @click="logout">
         Sign out
       </button>
     </div>

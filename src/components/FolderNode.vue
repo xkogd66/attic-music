@@ -17,11 +17,11 @@
         <span class="flex-1 truncate">{{ item.title || item.name }}</span>
       </div>
 
-      <div class="text-xs text-stone-400">{{ itemCountText }}</div>
+      <div class="text-xs text-stone-600">{{ itemCountText }}</div>
     </div>
 
     <div v-if="expanded" class="ml-6 border-l border-stone-100 pl-4 mt-2">
-      <div v-if="loading" class="py-2 text-stone-400 text-sm">Loading…</div>
+      <div v-if="loading" class="py-2 text-stone-600 text-sm">Loading…</div>
       <div v-else>
         <!-- child directories -->
         <FolderNode
@@ -35,11 +35,11 @@
              class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer active:bg-white transition-colors text-sm group"
              @click.stop="playTrack(track)"
         >
-          <span class="text-stone-400 flex-shrink-0">🎵</span>
+          <span class="text-stone-600 flex-shrink-0">🎵</span>
           <span class="flex-1 truncate">{{ track.title || track.name }}</span>
-          <span class="text-xs text-stone-400">{{ player.fmt(track.duration) }}</span>
+          <span class="text-xs text-stone-600">{{ player.fmt(track.duration) }}</span>
           <button
-            class="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-amber-700 border border-stone-200 hover:border-amber-700 hover:bg-amber-50 px-2 py-0.5 rounded text-base leading-snug transition-all flex-shrink-0"
+            class="opacity-0 group-hover:opacity-100 text-stone-600 hover:text-amber-700 border border-stone-200 hover:border-amber-700 hover:bg-amber-50 px-2 py-0.5 rounded text-base leading-snug transition-all flex-shrink-0"
             @click.stop="addToQueue(track)"
           >+</button>
         </div>
