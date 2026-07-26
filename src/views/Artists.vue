@@ -459,6 +459,7 @@
               </button>
             </div>
           </div>
+          <p v-if="coverSearchError" class="px-5 pb-2 text-xs text-red-500">{{ coverSearchError }}</p>
           <div class="px-5 py-3 border-t border-stone-100 flex items-center justify-between">
             <label class="text-xs text-stone-500 hover:text-amber-700 cursor-pointer">
               Upload from device
@@ -591,6 +592,7 @@ const coverSearchLoading = ref(false)
 const coverCandidates    = ref([])
 const coverSearchTarget  = ref('album')  // 'album' | 'avatar' — which upload the shared modal drives
 const coverSaving        = ref(false)
+const coverSearchError   = ref('')  // shown in the modal when an upload/save fails
 
 const TAGS_PREFIX  = 'attic_tags_'
 const GENRE_PREFIX = 'attic_genre_'
@@ -827,7 +829,11 @@ async function uploadArtistAvatar(e) {
       // cache-bust so the new image is fetched immediately
       artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}`
       coverSearchOpen.value = false
+    } else {
+      coverSearchError.value = (await res.text().catch(() => '')) || `Upload failed (${res.status})`
     }
+  } catch (_) {
+    coverSearchError.value = 'Upload failed — network error'
   } finally {
     e.target.value = ''
   }
@@ -874,14 +880,20 @@ async function uploadAlbumCover(e) {
   const album  = currentAlbum.value.name
   const form = new FormData()
   form.append('cover', file)
-  const res = await fetch(
-    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
-    { method: 'POST', body: form }
-  )
-  if (res.ok) {
-    albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
-    albumDetailCoverState.value = 'sidecar'
-    coverSearchOpen.value = false
+  try {
+    const res = await fetch(
+      `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+      { method: 'POST', body: form }
+    )
+    if (res.ok) {
+      albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
+      albumDetailCoverState.value = 'sidecar'
+      coverSearchOpen.value = false
+    } else {
+      coverSearchError.value = (await res.text().catch(() => '')) || `Upload failed (${res.status})`
+    }
+  } catch (_) {
+    coverSearchError.value = 'Upload failed — network error'
   }
 }
 
@@ -904,9 +916,11 @@ async function chooseCover(c) {
       albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
       albumDetailCoverState.value = 'sidecar'
       coverSearchOpen.value = false
+    } else {
+      coverSearchError.value = (await res.text().catch(() => '')) || `Save failed (${res.status})`
     }
   } catch (_) {
-    /* leave modal open so the user can pick another */
+    coverSearchError.value = 'Save failed — could not fetch or upload the image'
   } finally {
     coverSaving.value = false
   }
@@ -915,6 +929,7 @@ async function chooseCover(c) {
 async function openCoverSearch() {
   if (!currentAlbum.value) return
   coverSearchTarget.value = 'album'
+  coverSearchError.value = ''
   coverSearchOpen.value = true
   coverSearchLoading.value = true
   coverCandidates.value = []
@@ -934,6 +949,7 @@ function closeCoverSearch() {
 async function openAvatarSearch() {
   if (!currentArtist.value) return
   coverSearchTarget.value = 'avatar'
+  coverSearchError.value = ''
   coverSearchOpen.value = true
   coverSearchLoading.value = true
   coverCandidates.value = []
@@ -968,9 +984,11 @@ async function chooseAvatar(c) {
     if (res.ok) {
       artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}`
       coverSearchOpen.value = false
+    } else {
+      coverSearchError.value = (await res.text().catch(() => '')) || `Save failed (${res.status})`
     }
   } catch (_) {
-    /* leave modal open so the user can pick another */
+    coverSearchError.value = 'Save failed — could not fetch or upload the image'
   } finally {
     coverSaving.value = false
   }
