@@ -59,9 +59,12 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Rollout restart
+      - name: Deploy new image
         run: |
-          kubectl rollout restart deployment/attic-music -n webapps
+          # Deploy by immutable per-commit tag, not a `rollout restart` of the
+          # mutable :latest tag — a fresh tag is always pulled, so a node with an
+          # old :latest cached can no longer serve stale code.
+          kubectl set image deployment/attic-music attic=ghcr.io/${{ github.repository }}:${{ github.sha }} -n webapps
           kubectl rollout status deployment/attic-music -n webapps --timeout=120s
 
   build-artist-images:
