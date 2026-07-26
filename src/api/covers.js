@@ -76,3 +76,56 @@ export async function searchAlbumCovers(artist, album) {
   ])
   return [...lf, ...dz]
 }
+
+// Last.fm artist images (artist.getInfo + artist.search), largest per hit.
+async function lastfmArtistImages(name) {
+  const config = useConfigStore()
+  if (!config.lastfmKey) return []
+
+  const out = []
+  const seen = new Set()
+  const push = url => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Last.fm' }) } }
+  const base = `https://ws.audioscrobbler.com/2.0/?api_key=${encodeURIComponent(config.lastfmKey)}&format=json`
+
+  try {
+    const res  = await fetch(`${base}&method=artist.getinfo&artist=${encodeURIComponent(name)}`)
+    const json = await res.json()
+    push(bestLastfmImage(json?.artist?.image))
+  } catch (_) {}
+
+  try {
+    const res  = await fetch(`${base}&method=artist.search&artist=${encodeURIComponent(name)}&limit=10`)
+    const json = await res.json()
+    for (const m of ensureArray(json?.results?.artistmatches?.artist)) push(bestLastfmImage(m.image))
+  } catch (_) {}
+
+  return out
+}
+
+// Deezer (backup): artist search via the existing proxy, largest picture per hit.
+async function deezerArtistImages(name) {
+  try {
+    const res  = await fetch(`/deezer-api/search/artist?q=${encodeURIComponent(name)}&limit=10`)
+    const json = await res.json()
+    const out = []
+    const seen = new Set()
+    for (const a of ensureArray(json?.data)) {
+      const url = a.picture_xl || a.picture_big || a.picture_medium || a.picture
+      if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Deezer' }) }
+    }
+    return out
+  } catch (_) {
+    return []
+  }
+}
+
+// Aggregate image candidates for an artist — same shape/behaviour as
+// searchAlbumCovers. Last.fm mostly returns placeholders (filtered out), so
+// Deezer is the effective source, exactly as with album covers.
+export async function searchArtistImages(name) {
+  const [lf, dz] = await Promise.all([
+    lastfmArtistImages(name),
+    deezerArtistImages(name),
+  ])
+  return [...lf, ...dz]
+}

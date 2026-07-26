@@ -226,7 +226,7 @@
           <span>{{ currentArtist.name }}</span>
         </div>
         <div class="flex items-center gap-4">
-          <label class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex-shrink-0 bg-stone-100 relative cursor-pointer group/avatar" title="Upload artist photo">
+          <button type="button" class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex-shrink-0 bg-stone-100 relative cursor-pointer group/avatar" title="Change artist photo" @click="openAvatarSearch">
             <img
               v-if="artistDetailImageUrl"
               :src="artistDetailImageUrl"
@@ -240,8 +240,7 @@
             <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
               <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </div>
-            <input type="file" accept="image/*" class="hidden" @change="uploadArtistAvatar" />
-          </label>
+          </button>
           <h1 class="font-serif text-2xl md:text-4xl font-semibold">{{ currentArtist.name }}</h1>
         </div>
 
@@ -443,17 +442,17 @@
       <div v-if="coverSearchOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="closeCoverSearch">
         <div class="bg-white w-full max-w-md shadow-xl rounded-xl flex flex-col max-h-[80vh]">
           <div class="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
-            <h3 class="font-serif text-lg font-semibold">Pick a cover</h3>
+            <h3 class="font-serif text-lg font-semibold">{{ coverSearchTarget === 'avatar' ? 'Pick an image' : 'Pick a cover' }}</h3>
             <button class="text-stone-600 hover:text-stone-900" @click="closeCoverSearch">✕</button>
           </div>
           <div class="px-5 py-4 overflow-y-auto">
             <div v-if="coverSearchLoading" class="py-10 text-center text-stone-600 text-sm">Searching…</div>
-            <div v-else-if="!coverCandidates.length" class="py-10 text-center text-stone-600 text-sm">No covers found.</div>
+            <div v-else-if="!coverCandidates.length" class="py-10 text-center text-stone-600 text-sm">{{ coverSearchTarget === 'avatar' ? 'No images found.' : 'No covers found.' }}</div>
             <div v-else class="grid grid-cols-3 gap-3">
               <button v-for="(c, i) in coverCandidates" :key="i"
                 class="relative aspect-square rounded-lg overflow-hidden border border-stone-200 hover:border-amber-600 focus:border-amber-600 disabled:opacity-40 transition-colors"
                 :disabled="coverSaving"
-                @click="chooseCover(c)"
+                @click="pickCandidate(c)"
               >
                 <img :src="c.url" class="absolute inset-0 w-full h-full object-cover" loading="lazy" @error="$event.target.closest('button').style.display='none'" />
                 <span class="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] py-0.5 text-center">{{ c.source }}</span>
@@ -463,7 +462,7 @@
           <div class="px-5 py-3 border-t border-stone-100 flex items-center justify-between">
             <label class="text-xs text-stone-500 hover:text-amber-700 cursor-pointer">
               Upload from device
-              <input type="file" accept="image/*" class="hidden" @change="uploadAlbumCover" />
+              <input type="file" accept="image/*" class="hidden" @change="uploadFromDevice" />
             </label>
             <button class="text-xs px-4 py-2 rounded-full border border-stone-200 hover:border-stone-400 transition-colors" @click="closeCoverSearch">Cancel</button>
           </div>
@@ -480,7 +479,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap, startScan } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
-import { searchAlbumCovers } from '../api/covers'
+import { searchAlbumCovers, searchArtistImages } from '../api/covers'
 import { GENRES } from '../api/genres'
 import TrackItem  from '../components/TrackItem.vue'
 import ArtistCard from '../components/ArtistCard.vue'
@@ -590,6 +589,7 @@ const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'
 const coverSearchOpen    = ref(false)
 const coverSearchLoading = ref(false)
 const coverCandidates    = ref([])
+const coverSearchTarget  = ref('album')  // 'album' | 'avatar' — which upload the shared modal drives
 const coverSaving        = ref(false)
 
 const TAGS_PREFIX  = 'attic_tags_'
@@ -826,6 +826,7 @@ async function uploadArtistAvatar(e) {
     if (res.ok) {
       // cache-bust so the new image is fetched immediately
       artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}`
+      coverSearchOpen.value = false
     }
   } finally {
     e.target.value = ''
@@ -913,6 +914,7 @@ async function chooseCover(c) {
 
 async function openCoverSearch() {
   if (!currentAlbum.value) return
+  coverSearchTarget.value = 'album'
   coverSearchOpen.value = true
   coverSearchLoading.value = true
   coverCandidates.value = []
@@ -927,6 +929,51 @@ async function openCoverSearch() {
 
 function closeCoverSearch() {
   coverSearchOpen.value = false
+}
+
+async function openAvatarSearch() {
+  if (!currentArtist.value) return
+  coverSearchTarget.value = 'avatar'
+  coverSearchOpen.value = true
+  coverSearchLoading.value = true
+  coverCandidates.value = []
+  try {
+    coverCandidates.value = await searchArtistImages(currentArtist.value.name)
+  } finally {
+    coverSearchLoading.value = false
+  }
+}
+
+// The shared modal drives whichever target is open.
+function pickCandidate(c) {
+  return coverSearchTarget.value === 'avatar' ? chooseAvatar(c) : chooseCover(c)
+}
+function uploadFromDevice(e) {
+  return coverSearchTarget.value === 'avatar' ? uploadArtistAvatar(e) : uploadAlbumCover(e)
+}
+
+// Save a chosen remote avatar — same as chooseCover, but the avatar endpoint.
+async function chooseAvatar(c) {
+  if (!currentArtist.value || coverSaving.value) return
+  coverSaving.value = true
+  const name = currentArtist.value.name
+  try {
+    const blob = await (await fetch(c.url)).blob()
+    const form = new FormData()
+    form.append('cover', blob, 'avatar.jpg')
+    const res = await fetch(
+      `/artist-images/upload-avatar?name=${encodeURIComponent(name)}`,
+      { method: 'POST', body: form }
+    )
+    if (res.ok) {
+      artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}`
+      coverSearchOpen.value = false
+    }
+  } catch (_) {
+    /* leave modal open so the user can pick another */
+  } finally {
+    coverSaving.value = false
+  }
 }
 
 
