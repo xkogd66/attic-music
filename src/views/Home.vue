@@ -16,7 +16,7 @@
               class="flex-none cursor-pointer [width:28%] md:w-36"
               @click="goToArtist(artist)"
             >
-              <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
+              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                 <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                 <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
               </div>
@@ -34,7 +34,7 @@
               class="flex-none cursor-pointer [width:28%] md:w-36"
               @click="goToArtist(artist)"
             >
-              <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
+              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                 <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                 <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
               </div>

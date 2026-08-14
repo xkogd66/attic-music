@@ -1,6 +1,6 @@
 <template>
   <div class="cursor-pointer group" @click="emit('click')">
-    <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03]">
+    <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03]">
       <img
         v-if="imageUrl"
         :src="imageUrl"

@@ -120,7 +120,7 @@
           <h2 class="font-serif text-xl font-semibold mb-3">Recently Added</h2>
           <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width:none;-ms-overflow-style:none">
             <div v-for="artist in recentArtists" :key="artist.id" class="flex-none w-24 cursor-pointer group" @click="openArtist(artist)">
-              <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03] relative">
+              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03] relative">
                 <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                 <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
               </div>
@@ -133,7 +133,7 @@
           <h2 class="font-serif text-xl font-semibold mb-3">Discover Artists</h2>
           <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width:none;-ms-overflow-style:none">
             <div v-for="artist in discoverArtists" :key="artist.id" class="flex-none w-24 cursor-pointer group" @click="openArtist(artist)">
-              <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03] relative">
+              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03] relative">
                 <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                 <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
               </div>
@@ -167,7 +167,7 @@
               <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
               <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
                 <div v-for="artist in recentArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:28%" @click="openArtist(artist)">
-                  <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
+                  <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                     <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                     <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                   </div>
@@ -179,7 +179,7 @@
               <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Artists</div>
               <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
                 <div v-for="artist in discoverArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:28%" @click="openArtist(artist)">
-                  <div class="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-1.5 relative">
+                  <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                     <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                     <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                   </div>
@@ -226,7 +226,7 @@
           <span>{{ currentArtist.name }}</span>
         </div>
         <div class="flex items-center gap-4">
-          <button type="button" class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex-shrink-0 bg-stone-100 relative cursor-pointer group/avatar" title="Change artist photo" @click="openAvatarSearch">
+          <button type="button" class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0 bg-stone-100 relative cursor-pointer group/avatar" title="Change artist photo" @click="openAvatarSearch">
             <img
               v-if="artistDetailImageUrl"
               :src="artistDetailImageUrl"
@@ -450,7 +450,8 @@
             <div v-else-if="!coverCandidates.length" class="py-10 text-center text-stone-600 text-sm">{{ coverSearchTarget === 'avatar' ? 'No images found.' : 'No covers found.' }}</div>
             <div v-else class="grid grid-cols-3 gap-3">
               <button v-for="(c, i) in coverCandidates" :key="i"
-                class="relative aspect-square rounded-lg overflow-hidden border border-stone-200 hover:border-amber-600 focus:border-amber-600 disabled:opacity-40 transition-colors"
+                class="relative aspect-square overflow-hidden border border-stone-200 hover:border-amber-600 focus:border-amber-600 disabled:opacity-40 transition-colors"
+                :class="coverSearchTarget === 'avatar' ? 'rounded-full' : 'rounded-lg'"
                 :disabled="coverSaving"
                 @click="pickCandidate(c)"
               >

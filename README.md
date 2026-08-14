@@ -54,7 +54,7 @@ src/
     SideBar.vue      # desktop sidebar (nav + last.fm scrobbles)
     FolderNode.vue   # expandable folder tree node
     TrackItem.vue    # track list item
-    ArtistCard.vue   # artist grid card with avatar
+    ArtistCard.vue   # artist grid card with circular avatar
   App.vue           # root layout + auth check
   main.js           # entry point
   style.css         # Tailwind import + root styles
@@ -116,6 +116,7 @@ src/
 - A dedicated Go sidecar (`artist-images/`) serves images directly from the NFS volume, bypassing the Subsonic API entirely
 - Gonic does **not** serve standalone `cover.jpg` files via `getCoverArt` — it only returns embedded ID3 art; the sidecar is the authoritative source for both artist and album cover art
 - `ArtistCard` image fallback chain: sidecar (`/artist-images/avatar?name=<artist>`) → Subsonic `getCoverArt?id=<artistId>` → letter placeholder
+- Artist avatars are always rendered circular (`rounded-full`) everywhere they appear (grid cards, carousels on Home/Artists, artist-detail hero, mobile contact-list, avatar-picker modal); album covers stay square/`rounded-lg`/`rounded-xl` and are never circular. The avatar-picker modal is shared between avatar and album-cover search, so its thumbnail shape is conditional on `coverSearchTarget === 'avatar'`
 - Album cover fallback chain (carousel, grid, detail): Subsonic `getCoverArt?id=<albumId>` → sidecar (`/artist-images/album?artist=<artist>&album=<album>`) → "Add cover" upload button → 💿 placeholder
 - Album detail views (`Artists.vue`, `Albums.vue`) use reactive `albumDetailCoverSrc`/`albumDetailCoverState` refs (`'loading'` → `'sidecar'` → `'failed'`) to drive the fallback chain; when both sources fail, an "Add cover" label/file-input is shown
 - Album grid cards (artist detail view) use the DOM-based `onAlbumCoverError(e, album)` pattern (same as Albums.vue carousel/grid) — tries sidecar via `dataset.triedSidecar`, then hides
@@ -173,7 +174,7 @@ src/
 ### Mobile Artists Page (Artists.vue)
 - **Header** (mobile): search input + Genre dropdown + Year dropdown in one row. Genre/year filter data comes from `getArtistGenreMap()` (loaded async, uses plain arrays for Vue reactivity).
 - **Browse mode** (no search query and no filter active): shows Recently Added Artists carousel + Discover Artists carousel (no Discover Albums)
-- **Search/filter mode** (query or filter applied): alphabetical contact list with letter-group headers and circular avatar thumbnails
+- **Search/filter mode** (query or filter applied): alphabetical contact list with letter-group headers and avatar thumbnails
 - Desktop: unchanged — letter nav + genre/year filters + expandable letter groups + carousels
 
 ### Albums Page (Albums.vue)
