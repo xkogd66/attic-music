@@ -4,6 +4,15 @@ never run the build (npm run build, npm run dev, npm run preview, etc.) to test 
 
 never run kubectl commands.
 
+## mcp-server/
+
+`mcp-server/` is a separate Node MCP server (merged in 2026-08-18 from a
+standalone project at `~/Repos/mcp/gonic-mcp`) that lets Claude Code talk to
+this app's gonic backend directly. It is NOT part of the Vite app — own
+`package.json`, not touched by `npm run build`/`dev`/`preview`, not in the
+Docker/k8s deploy path described below. See `mcp-server/README.md`. Its
+`gonic.env` credentials file is gitignored — never commit it.
+
 ## how this app is served
 
 - push to `main` triggers `.github/workflows/deploy.yaml`: builds the Vite app into an

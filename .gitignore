@@ -25,3 +25,4 @@ dist-ssr
 
 public/config.json
 k8s/secret.yaml
+mcp-server/gonic.env

@@ -23,6 +23,7 @@ npm run preview   # serve production build locally
 ## Project Structure
 
 ```
+mcp-server/      # gonic MCP server for Claude Code (merged in, see below) — NOT part of the Vite app
 artist-images/
   main.go         # Go sidecar — serves artist cover.jpg from NFS
   Dockerfile      # multi-stage build → minimal Alpine image
@@ -192,6 +193,22 @@ src/
 - Desktop search is in the sidebar (`SideBar.vue`); results show Artists, Albums, and Songs
 - Song results in sidebar call `player.playTrack(song, [song], 0)` on click
 - Mobile has a dedicated `/search` route
+
+## MCP Server
+
+`mcp-server/` is a standalone Node MCP (Model Context Protocol) server that
+lets Claude Code query and manage this app's gonic backend directly
+(search, artists/albums/playlists, trigger library scans, check scan
+status). It merged into this repo on 2026-08-18 — it started as its own
+project (`~/Repos/mcp/gonic-mcp`) but talks to the exact same gonic instance
+(`https://gonic.ekskog.net`) this app's frontend uses, so it lives here now
+instead of a separate repo.
+
+It is **independent of the Vite app**: its own `package.json`, own
+`node_modules`, not built or deployed by anything in this README's
+Commands/Deployment sections. See `mcp-server/README.md` for what it does,
+its tools, and setup. Its credentials file (`mcp-server/gonic.env`) is
+gitignored — never commit it.
 
 ## Deployment
 
