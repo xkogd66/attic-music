@@ -1,0 +1,10 @@
+{
+  "name": "chat-server",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1"
+  }
+}

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-server
+  namespace: webapps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-server
+  template:
+    metadata:
+      labels:
+        app: chat-server
+    spec:
+      containers:
+        - name: chat-server
+          image: ghcr.io/xkogd66/chat-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8090
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: ANTHROPIC_API_KEY
+            - name: GONIC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: GONIC_URL
+            - name: GONIC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: GONIC_USERNAME
+            - name: GONIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: GONIC_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-server
+  namespace: webapps
+spec:
+  selector:
+    app: chat-server
+  ports:
+    - port: 8090
+      targetPort: 8090

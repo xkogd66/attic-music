@@ -20,6 +20,11 @@ export default defineConfig({
         target: 'https://api.deezer.com',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/deezer-api/, '')
+      },
+      '/chat-api': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/chat-api/, '')
       }
     }
   },
