@@ -10,23 +10,30 @@
           @click="toggleAiMode"
         >✨ Ask AI</button>
       </div>
-      <div class="relative">
-        <input
-          ref="inputEl"
-          v-model="query"
-          type="search"
-          :placeholder="aiMode ? 'Ask about your library… (Enter to send)' : 'Artists, albums…'"
-          class="w-full text-sm px-3 py-2.5 rounded-lg border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
-          @input="onInput"
-          @keydown.enter="onEnter"
-          @keydown.escape="clear"
-        />
+      <form class="flex gap-2" @submit.prevent="onEnter">
+        <div class="relative flex-1">
+          <input
+            ref="inputEl"
+            v-model="query"
+            type="search"
+            :placeholder="aiMode ? 'Ask about your library…' : 'Artists, albums…'"
+            class="w-full text-sm px-3 py-2.5 rounded-lg border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
+            @input="onInput"
+            @keydown.escape="clear"
+          />
+          <button
+            v-if="query"
+            type="button"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-600 text-xs"
+            @click="clear"
+          >✕</button>
+        </div>
         <button
-          v-if="query"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-stone-600 text-xs"
-          @click="clear"
-        >✕</button>
-      </div>
+          v-if="aiMode"
+          type="submit"
+          class="flex-shrink-0 px-4 rounded-lg bg-amber-500 text-white text-sm font-medium active:bg-amber-600 transition-colors"
+        >Send</button>
+      </form>
     </div>
 
     <div class="flex-1 overflow-y-auto pb-40">
