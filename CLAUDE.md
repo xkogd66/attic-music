@@ -18,8 +18,13 @@ Docker/k8s deploy path described below. See `mcp-server/README.md`. Its
 `chat-server/` is the **Ask AI backend** — a separate Node HTTP service, not
 the MCP server and not part of the Vite app (own `package.json`, own image
 `ghcr.io/xkogd66/chat-server:latest`, own manifest `k8s/chat-server.yaml`).
-It is NOT built or deployed by `.github/workflows/deploy.yaml` — that workflow
-only handles the Vite app, so pushing to `main` does not update it.
+`.github/workflows/deploy.yaml` has a `build-chat-server` job that builds and
+pushes the image, then `kubectl apply -f k8s/chat-server.yaml` + rollout —
+**but only when the push changed a file under `chat-server/`** (it tests
+`git diff --name-only HEAD~1 HEAD | grep '^chat-server/'`). A commit touching
+only `k8s/chat-server.yaml` — e.g. editing `LLM_PROVIDERS` — changes nothing
+in `chat-server/`, so the whole job is skipped and the config is never
+applied. Apply it by hand in that case.
 
 It runs an LLM tool-calling loop over one tool (Subsonic `search3` against
 gonic) and serves `POST /chat` + `GET /providers`, proxied by nginx at

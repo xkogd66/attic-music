@@ -42,7 +42,13 @@
         <div v-if="loading" class="py-12 text-center text-sm text-stone-600">Thinking…</div>
 
         <template v-else-if="reply">
-          <div class="px-5 py-3 text-sm text-stone-700 bg-amber-50/50 border-b border-stone-100">{{ reply }}</div>
+          <div class="px-5 py-3 text-sm text-stone-700 bg-amber-50/50 border-b border-stone-100">
+            <span
+              v-for="(part, i) in replyParts"
+              :key="i"
+              :class="{ 'font-semibold': part.bold }"
+            >{{ part.text }}</span>
+          </div>
           <div v-if="!songs.length" class="py-12 text-center text-sm text-stone-600">No songs found</div>
           <TrackItem
             v-for="(track, i) in songs"
@@ -65,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { askAI, fetchProviders } from '../api/chat'
 import { usePlayerStore } from '../stores/player'
 import TrackItem from './TrackItem.vue'
@@ -86,6 +92,17 @@ onMounted(async () => {
   providers.value = await fetchProviders()
   provider.value = providers.value[0]?.id || ''
 })
+
+// The prompt asks for plain prose, but models still emit **bold** — render it
+// as text segments rather than v-html, so model output is never treated as HTML.
+const replyParts = computed(() =>
+  reply.value
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((s) => (s.startsWith('**') && s.endsWith('**')
+      ? { bold: true, text: s.slice(2, -2) }
+      : { bold: false, text: s })),
+)
 
 watch(() => props.open, async (open) => {
   if (open) {

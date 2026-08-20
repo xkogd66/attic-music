@@ -237,14 +237,24 @@ framework. Plain `node:http` server exposing two routes — `POST /chat`, taking
 `GET /providers`, returning `[{ id, label }]` for the client's picker. Nginx
 proxies both at `/chat-api/`.
 
-It runs a small agentic loop (`runChat`, max 4 turns): the LLM is given one
-tool, `search_music`, which the server implements as a Subsonic `search3`
-call against gonic (same token auth as everywhere else — `md5(password +
-salt)` per request). The LLM may call it several times to cover a request;
-results are accumulated into deduped maps keyed by id. The loop ends when the
-model replies with no tool call. The model's prose reply is deliberately kept
-to a sentence or two — the app renders the actual track/album/artist lists
-itself from the returned arrays.
+It runs a small agentic loop (`runChat`, max 5 turns) with two tools:
+
+- `search_music` — a Subsonic `search3` call against gonic (same token auth as
+  everywhere else, `md5(password + salt)` per request). Callable repeatedly;
+  results accumulate into deduped maps keyed by id.
+- `show_songs` — takes the ids the model wants displayed. **This is what the
+  app renders.**
+
+`show_songs` exists because `search3` matches loosely: asking for David
+Bowie's "Let's Dance" also returns Chris Rea, Ramones and Blondie tracks.
+Without a selection step the model would summarise the relevant subset in
+prose while the UI listed every raw hit, so the reply and the list disagreed.
+Now the model states a count and passes exactly those ids. Ids it passes that
+weren't in any search result are dropped, and if it never calls `show_songs`
+at all, the server falls back to returning everything found.
+
+The loop ends when the model replies with no tool call. Its prose reply is
+deliberately a sentence or two — the app renders the tracks itself.
 
 **Providers.** A list, not a single choice — the user picks one per request
 from a dropdown in the chat UI. Two kinds are supported: `anthropic` (the

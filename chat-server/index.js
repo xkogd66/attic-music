@@ -81,14 +81,37 @@ const TOOLS = [
       required: ["query"],
     },
   },
+  {
+    name: "show_songs",
+    description:
+      "Show a specific set of songs to the user. Call this once, after searching, passing only the ids of songs " +
+      "that actually answer the request — search returns loose matches by other artists, and those must be left " +
+      "out. The app displays exactly the songs you list here and nothing else.",
+    input_schema: {
+      type: "object",
+      properties: {
+        ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Song ids taken from search results, in the order they should be displayed",
+        },
+      },
+      required: ["ids"],
+    },
+  },
 ];
 
 const SYSTEM_PROMPT =
   "You are a music library search assistant. Use the search_music tool to find what the user is asking " +
-  "about (songs, albums, artists) — call it as many times as needed to cover the request. Reply with a " +
-  "brief, one or two sentence summary of what you found; do not list every track, the app renders those separately.";
+  "about (songs, albums, artists) — call it as many times as needed to cover the request. Search matches " +
+  "loosely, so results routinely include songs by other artists that do not answer the request. When you " +
+  "have searched enough, call show_songs with the ids of only the songs that genuinely answer it; the app " +
+  "displays exactly that list. Then reply with a brief, one or two sentence summary. Do not list every " +
+  "track in your reply, and make sure any count you state matches the number of ids you passed to show_songs. " +
+  "Write plain prose — no markdown, no bold, no bullet points.";
 
-const MAX_TURNS = 4;
+// One extra turn over the old 4: searching, then show_songs, then the summary.
+const MAX_TURNS = 5;
 
 // Anthropic's block format is the internal shape; OpenAI-compatible endpoints
 // are translated on the way in and out so runChat stays provider-agnostic.
@@ -156,28 +179,42 @@ async function callModel(messages, provider) {
 async function runChat(message, provider) {
   const messages = [{ role: "user", content: message }];
   const found = { songs: new Map(), albums: new Map(), artists: new Map() };
+  // ids the model picked via show_songs; null means it never called it
+  let shown = null;
+
+  // Search results are loose matches — show what the model selected, and only
+  // fall back to everything found if it never made a selection.
+  const result = (reply) => ({
+    reply,
+    songs: shown ? shown.map((id) => found.songs.get(id)).filter(Boolean) : [...found.songs.values()],
+    albums: [...found.albums.values()],
+    artists: [...found.artists.values()],
+  });
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const response = await callModel(messages, provider);
 
     const toolUses = response.content.filter((b) => b.type === "tool_use");
     if (toolUses.length === 0) {
-      const reply = response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
-      return {
-        reply,
-        songs: [...found.songs.values()],
-        albums: [...found.albums.values()],
-        artists: [...found.artists.values()],
-      };
+      return result(response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n"));
     }
 
     messages.push({ role: "assistant", content: response.content });
 
     const toolResults = [];
     for (const use of toolUses) {
+      if (use.name === "show_songs") {
+        shown = [].concat(use.input?.ids ?? []).map(String);
+        const kept = shown.filter((id) => found.songs.has(id)).length;
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: use.id,
+          content: `Showing ${kept} song(s).${kept < shown.length ? " Some ids were not in the search results and were dropped." : ""}`,
+        });
+        continue;
+      }
       try {
-        const result = await subsonic("search3", { query: use.input.query });
-        const r = result.searchResult3 || {};
+        const r = (await subsonic("search3", { query: use.input.query })).searchResult3 || {};
         for (const s of [].concat(r.song ?? [])) found.songs.set(s.id, s);
         for (const a of [].concat(r.album ?? [])) found.albums.set(a.id, a);
         for (const a of [].concat(r.artist ?? [])) found.artists.set(a.id, a);
@@ -190,12 +227,7 @@ async function runChat(message, provider) {
   }
 
   // ponytail: MAX_TURNS hit — return whatever we found rather than error out.
-  return {
-    reply: "Found some results, but stopped after a few search rounds.",
-    songs: [...found.songs.values()],
-    albums: [...found.albums.values()],
-    artists: [...found.artists.values()],
-  };
+  return result("Found some results, but stopped after a few search rounds.");
 }
 
 const server = createServer((req, res) => {
