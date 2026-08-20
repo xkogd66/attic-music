@@ -23,31 +23,29 @@
 
     <!-- SEARCH -->
     <div class="px-4 pb-4 flex-shrink-0 relative" ref="searchContainer">
-      <div class="flex items-center gap-1.5">
-        <form class="relative flex-1 flex gap-1.5" @submit.prevent>
-          <div class="relative flex-1">
-            <input
-              v-model="query"
-              type="text"
-              placeholder="Search…"
-              class="w-full text-sm px-3 py-1.5 rounded border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
-              @input="onInput"
-              @keydown.escape="clear"
-            />
-            <button
-              v-if="query"
-              type="button"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-800 text-xs leading-none"
-              @click="clear"
-            >✕</button>
-          </div>
-        </form>
+      <form class="relative" @submit.prevent>
+        <input
+          v-model="query"
+          type="text"
+          placeholder="Search…"
+          class="w-full text-sm px-3 py-1.5 rounded border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
+          @input="onInput"
+          @keydown.escape="clear"
+        />
         <button
-          class="flex-shrink-0 text-xs px-1.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
-          title="Ask AI"
-          @click="askOpen = true"
-        >✨</button>
-      </div>
+          v-if="query"
+          type="button"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-800 text-xs leading-none"
+          @click="clear"
+        >✕</button>
+      </form>
+
+      <button
+        class="w-full mt-1.5 flex items-center justify-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+        @click="askOpen = true"
+      >
+        <span aria-hidden="true">✨</span> Ask AI
+      </button>
 
       <div
         v-if="results && (results.artists.length || results.albums.length || results.songs.length)"
