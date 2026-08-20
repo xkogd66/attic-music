@@ -24,12 +24,21 @@ npm run preview   # serve production build locally
 
 ```
 mcp-server/      # gonic MCP server for Claude Code (merged in, see below) — NOT part of the Vite app
+chat-server/     # Ask AI backend — Node HTTP + LLM tool loop (see below) — NOT part of the Vite app
+  index.js        # the server: POST /chat, GET /providers, Subsonic search tool
+  Dockerfile      # → ghcr.io/xkogd66/chat-server:latest
+k8s/
+  deployment.yaml            # the Vite app
+  artist-images.yaml         # Go sidecar
+  chat-server.yaml           # Ask AI backend + LLM_PROVIDERS config
+  chat-server-secret.example.yaml  # template for chat-server-secret — fill in, never commit
 artist-images/
   main.go         # Go sidecar — serves artist cover.jpg from NFS
   Dockerfile      # multi-stage build → minimal Alpine image
 src/
   api/
     subsonic.js   # Subsonic REST API client
+    chat.js       # Ask AI backend client (askAI + fetchProviders)
     lastfm.js     # Last.fm scrobbling integration
     lyrics.js     # LRCLIB lyrics fetching + manual lyrics
     genres.js     # 40 curated standard genre names
@@ -52,7 +61,8 @@ src/
     MiniPlayer.vue   # mobile mini player
     FullPlayer.vue   # mobile full-screen player
     BottomNav.vue    # mobile bottom nav (5 tabs)
-    SideBar.vue      # desktop sidebar (nav + last.fm scrobbles)
+    SideBar.vue      # desktop sidebar (nav + search + last.fm scrobbles)
+    AskAiModal.vue   # desktop Ask AI overlay (opened from the sidebar ✨ button)
     FolderNode.vue   # expandable folder tree node
     TrackItem.vue    # track list item
     ArtistCard.vue   # artist grid card with circular avatar
@@ -193,6 +203,10 @@ src/
 - Desktop search is in the sidebar (`SideBar.vue`); results show Artists, Albums, and Songs
 - Song results in sidebar call `player.playTrack(song, [song], 0)` on click
 - Mobile has a dedicated `/search` route
+- **Ask AI is separate from search on desktop** — the sidebar box is plain
+  search only. The ✨ button next to it opens `AskAiModal.vue`. On mobile the
+  two still share one view via the ✨ toggle in `Search.vue`. See
+  [Chat Server](#chat-server) for the backend.
 
 ## MCP Server
 
@@ -271,10 +285,20 @@ can pick in the UI is one the server has already proved it can authenticate.
 | `PORT` | `8090` | |
 
 **Client.** `src/api/chat.js` exports `fetchProviders()` and `askAI(message,
-provider)`. Both chat UIs — `SideBar.vue` (desktop) and `Search.vue` (mobile)
-— load the list on mount, default to the first entry, and render a `<select>`
-only when more than one provider is configured, so a single-provider
-deployment shows no extra UI.
+provider)`. Both callers load the list on mount, default to the first entry,
+and render a `<select>` only when more than one provider is configured, so a
+single-provider deployment shows no extra UI.
+
+Desktop and mobile split here deliberately:
+
+- **Desktop** — Ask AI is separate from search. The sidebar's ✨ button opens
+  `AskAiModal.vue`, a centered overlay with its own input, provider picker and
+  full-width `TrackItem` rows. The sidebar search box is plain search only —
+  no AI mode, no toggle. The 224px column was too narrow to show a reply and
+  a track list at once.
+- **Mobile** — `Search.vue` keeps the inline ✨ toggle that flips the existing
+  full-screen search view into AI mode. There is no sidebar to escape, so a
+  modal would buy nothing.
 
 **Deployment.** `k8s/chat-server.yaml` — Deployment + Service in namespace
 `webapps`, image `ghcr.io/xkogd66/chat-server:latest`, port 8090, env pulled

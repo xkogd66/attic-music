@@ -24,12 +24,12 @@
     <!-- SEARCH -->
     <div class="px-4 pb-4 flex-shrink-0 relative" ref="searchContainer">
       <div class="flex items-center gap-1.5">
-        <form class="relative flex-1 flex gap-1.5" @submit.prevent="onEnter">
+        <form class="relative flex-1 flex gap-1.5" @submit.prevent>
           <div class="relative flex-1">
             <input
               v-model="query"
               type="text"
-              :placeholder="aiMode ? 'Ask about your library…' : 'Search…'"
+              placeholder="Search…"
               class="w-full text-sm px-3 py-1.5 rounded border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
               @input="onInput"
               @keydown.escape="clear"
@@ -41,47 +41,16 @@
               @click="clear"
             >✕</button>
           </div>
-          <button
-            v-if="aiMode"
-            type="submit"
-            class="flex-shrink-0 px-2 rounded bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors"
-          >Go</button>
         </form>
         <button
-          class="flex-shrink-0 text-xs px-1.5 py-1.5 rounded border transition-colors"
-          :class="aiMode ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-600'"
+          class="flex-shrink-0 text-xs px-1.5 py-1.5 rounded border border-stone-200 text-stone-600 hover:border-amber-400 hover:text-amber-700 transition-colors"
           title="Ask AI"
-          @click="toggleAiMode"
+          @click="askOpen = true"
         >✨</button>
       </div>
 
-      <select
-        v-if="aiMode && providers.length > 1"
-        v-model="provider"
-        class="mt-1.5 w-full text-xs px-2 py-1 rounded border border-stone-200 bg-stone-50 text-stone-600 focus:outline-none focus:border-amber-400"
-      >
-        <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.label }}</option>
-      </select>
-
       <div
-        v-if="aiMode && aiReply"
-        class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
-      >
-        <div class="px-3 py-2 text-sm text-stone-700 border-b border-stone-100 bg-amber-50/50">{{ aiReply }}</div>
-        <div v-if="!aiSongs.length" class="px-3 py-3 text-sm text-stone-600">No songs found</div>
-        <button
-          v-for="song in aiSongs"
-          :key="song.id"
-          class="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 hover:text-amber-700 transition-colors"
-          @click="playSong(song)"
-        >
-          <div class="truncate">{{ song.title }}</div>
-          <div class="text-xs text-stone-600 truncate">{{ song.artist }} · {{ song.album }}</div>
-        </button>
-      </div>
-
-      <div
-        v-else-if="!aiMode && results && (results.artists.length || results.albums.length || results.songs.length)"
+        v-if="results && (results.artists.length || results.albums.length || results.songs.length)"
         class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
       >
         <template v-if="results.artists.length">
@@ -126,7 +95,7 @@
       </div>
 
       <div
-        v-else-if="!aiMode && query && results"
+        v-else-if="query && results"
         class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg px-3 py-3 text-sm text-stone-600"
       >No results</div>
     </div>
@@ -141,17 +110,19 @@
       </button>
     </div>
 
+    <AskAiModal :open="askOpen" @close="askOpen = false" />
+
   </aside>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConfigStore } from '../stores/config'
 import { usePlayerStore } from '../stores/player'
 import { search } from '../api/subsonic'
-import { askAI, fetchProviders } from '../api/chat'
 import RecentPlays from './RecentPlays.vue'
+import AskAiModal from './AskAiModal.vue'
 import { House, Mic2, Disc3, ListMusic } from 'lucide-vue-next'
 
 const config = useConfigStore()
@@ -179,25 +150,10 @@ function logout() {
 const query           = ref('')
 const results         = ref(null)
 const searchContainer = ref(null)
-const aiMode          = ref(false)
-const aiReply         = ref('')
-const aiSongs         = ref([])
-const providers       = ref([])
-const provider        = ref('')
+const askOpen         = ref(false)
 let debounceTimer     = null
 
-onMounted(async () => {
-  providers.value = await fetchProviders()
-  provider.value = providers.value[0]?.id || ''
-})
-
-function toggleAiMode() {
-  aiMode.value = !aiMode.value
-  clear()
-}
-
 function onInput() {
-  if (aiMode.value) return // AI mode submits on Enter, not live
   clearTimeout(debounceTimer)
   if (!query.value.trim()) { results.value = null; return }
   debounceTimer = setTimeout(async () => {
@@ -205,23 +161,9 @@ function onInput() {
   }, 300)
 }
 
-async function onEnter() {
-  if (!aiMode.value || !query.value.trim()) return
-  try {
-    const res = await askAI(query.value.trim(), provider.value)
-    aiReply.value = res.reply || ''
-    aiSongs.value = res.songs || []
-  } catch (err) {
-    aiReply.value = `Something went wrong: ${err.message}`
-    aiSongs.value = []
-  }
-}
-
 function clear() {
   query.value   = ''
   results.value = null
-  aiReply.value = ''
-  aiSongs.value = []
   clearTimeout(debounceTimer)
 }
 
@@ -243,7 +185,6 @@ function playSong(song) {
 function onDocClick(e) {
   if (searchContainer.value && !searchContainer.value.contains(e.target)) {
     results.value = null
-    aiReply.value  = ''
   }
 }
 

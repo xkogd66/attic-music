@@ -13,6 +13,26 @@ this app's gonic backend directly. It is NOT part of the Vite app — own
 Docker/k8s deploy path described below. See `mcp-server/README.md`. Its
 `gonic.env` credentials file is gitignored — never commit it.
 
+## chat-server/
+
+`chat-server/` is the **Ask AI backend** — a separate Node HTTP service, not
+the MCP server and not part of the Vite app (own `package.json`, own image
+`ghcr.io/xkogd66/chat-server:latest`, own manifest `k8s/chat-server.yaml`).
+It is NOT built or deployed by `.github/workflows/deploy.yaml` — that workflow
+only handles the Vite app, so pushing to `main` does not update it.
+
+It runs an LLM tool-calling loop over one tool (Subsonic `search3` against
+gonic) and serves `POST /chat` + `GET /providers`, proxied by nginx at
+`/chat-api/`. Providers are selectable per request by the user; the list is
+`LLM_PROVIDERS`, a JSON array in the deployment env, and the server refuses to
+start if a listed provider's key env var is missing. Two provider kinds:
+`anthropic` (SDK) and `openai` (any OpenAI-compatible endpoint). Full details
+in the root [README.md](README.md#chat-server).
+
+`k8s/chat-server-secret.example.yaml` is a template — the filled-in
+`chat-server-secret.yaml` holds live API keys and must never be committed.
+**This is a public repo.**
+
 ## how this app is served
 
 - push to `main` triggers `.github/workflows/deploy.yaml`: builds the Vite app into an

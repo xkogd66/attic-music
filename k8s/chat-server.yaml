@@ -39,7 +39,7 @@ spec:
                     "baseUrl": "http://ollama.webapps.svc.cluster.local:11434/v1", "apiKeyEnv": "OLLAMA_API_KEY" },
                   { "id": "gemini",   "label": "Gemini", "kind": "openai", "model": "REPLACE_ME",
                     "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "apiKeyEnv": "GEMINI_API_KEY" },
-                  { "id": "deepseek", "label": "DeepSeek", "kind": "openai", "model": "REPLACE_ME",
+                  { "id": "deepseek", "label": "DeepSeek", "kind": "openai", "model": "deepseek-v4-flash",
                     "baseUrl": "https://api.deepseek.com/v1", "apiKeyEnv": "DEEPSEEK_API_KEY" }
                 ]
             - name: OLLAMA_API_KEY
