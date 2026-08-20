@@ -11,12 +11,44 @@ const GONIC_URL = process.env.GONIC_URL;
 const GONIC_USERNAME = process.env.GONIC_USERNAME;
 const GONIC_PASSWORD = process.env.GONIC_PASSWORD;
 
-if (!GONIC_URL || !GONIC_USERNAME || !GONIC_PASSWORD || !process.env.ANTHROPIC_API_KEY) {
-  console.error("[ERROR] GONIC_URL, GONIC_USERNAME, GONIC_PASSWORD, ANTHROPIC_API_KEY must be set");
+// Selectable providers, as JSON in LLM_PROVIDERS. kind "anthropic" uses the
+// SDK (key from ANTHROPIC_API_KEY); kind "openai" is any OpenAI-compatible
+// /chat/completions endpoint (OpenAI, Groq, Together, OpenRouter, Ollama, vLLM).
+// The first entry is the default when a request names no provider.
+const DEFAULT_PROVIDERS = [
+  { id: "claude", label: "Claude Haiku", kind: "anthropic", model: "claude-haiku-4-5" },
+];
+
+let PROVIDERS;
+try {
+  PROVIDERS = process.env.LLM_PROVIDERS ? JSON.parse(process.env.LLM_PROVIDERS) : DEFAULT_PROVIDERS;
+} catch (err) {
+  console.error(`[ERROR] LLM_PROVIDERS is not valid JSON: ${err.message}`);
   process.exit(1);
 }
 
-const anthropic = new Anthropic();
+if (!Array.isArray(PROVIDERS) || PROVIDERS.length === 0) {
+  console.error("[ERROR] LLM_PROVIDERS must be a non-empty JSON array");
+  process.exit(1);
+}
+for (const p of PROVIDERS) {
+  if (!p.id || !p.model || !["anthropic", "openai"].includes(p.kind)) {
+    console.error(`[ERROR] provider ${JSON.stringify(p)} needs id, model and kind ("anthropic" or "openai")`);
+    process.exit(1);
+  }
+  const key = p.kind === "anthropic" ? "ANTHROPIC_API_KEY" : p.apiKeyEnv || "OPENAI_API_KEY";
+  if (!process.env[key]) {
+    console.error(`[ERROR] provider "${p.id}" needs ${key} to be set`);
+    process.exit(1);
+  }
+}
+
+if (!GONIC_URL || !GONIC_USERNAME || !GONIC_PASSWORD) {
+  console.error("[ERROR] GONIC_URL, GONIC_USERNAME, GONIC_PASSWORD must be set");
+  process.exit(1);
+}
+
+const anthropic = PROVIDERS.some((p) => p.kind === "anthropic") ? new Anthropic() : null;
 
 async function subsonic(endpoint, params = {}) {
   const salt = randomBytes(6).toString("hex");
@@ -58,18 +90,75 @@ const SYSTEM_PROMPT =
 
 const MAX_TURNS = 4;
 
-async function runChat(message) {
-  const messages = [{ role: "user", content: message }];
-  const found = { songs: new Map(), albums: new Map(), artists: new Map() };
-
-  for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
+// Anthropic's block format is the internal shape; OpenAI-compatible endpoints
+// are translated on the way in and out so runChat stays provider-agnostic.
+async function callModel(messages, provider) {
+  if (provider.kind === "anthropic") {
+    return anthropic.messages.create({
+      model: provider.model,
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       tools: TOOLS,
       messages,
     });
+  }
+
+  const oaMessages = [{ role: "system", content: SYSTEM_PROMPT }];
+  for (const m of messages) {
+    if (typeof m.content === "string") {
+      oaMessages.push({ role: m.role, content: m.content });
+    } else if (m.role === "assistant") {
+      const text = m.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+      const toolCalls = m.content
+        .filter((b) => b.type === "tool_use")
+        .map((b) => ({ id: b.id, type: "function", function: { name: b.name, arguments: JSON.stringify(b.input) } }));
+      oaMessages.push({
+        role: "assistant",
+        content: text || null,
+        ...(toolCalls.length ? { tool_calls: toolCalls } : {}),
+      });
+    } else {
+      // a user turn carrying tool_result blocks becomes one "tool" message each
+      for (const b of m.content) {
+        oaMessages.push({ role: "tool", tool_call_id: b.tool_use_id, content: b.content });
+      }
+    }
+  }
+
+  const baseUrl = provider.baseUrl || "https://api.openai.com/v1";
+  const apiKey = process.env[provider.apiKeyEnv || "OPENAI_API_KEY"];
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: provider.model,
+      // ponytail: max_tokens, not max_completion_tokens — the older name is the
+      // one every OpenAI-compatible clone accepts. Switch if you only target OpenAI.
+      max_tokens: 1024,
+      messages: oaMessages,
+      tools: TOOLS.map((t) => ({
+        type: "function",
+        function: { name: t.name, description: t.description, parameters: t.input_schema },
+      })),
+    }),
+  });
+  if (!res.ok) throw new Error(`LLM API ${res.status}: ${await res.text()}`);
+
+  const msg = (await res.json()).choices[0].message;
+  const content = [];
+  if (msg.content) content.push({ type: "text", text: msg.content });
+  for (const c of msg.tool_calls ?? []) {
+    content.push({ type: "tool_use", id: c.id, name: c.function.name, input: JSON.parse(c.function.arguments) });
+  }
+  return { content };
+}
+
+async function runChat(message, provider) {
+  const messages = [{ role: "user", content: message }];
+  const found = { songs: new Map(), albums: new Map(), artists: new Map() };
+
+  for (let turn = 0; turn < MAX_TURNS; turn++) {
+    const response = await callModel(messages, provider);
 
     const toolUses = response.content.filter((b) => b.type === "tool_use");
     if (toolUses.length === 0) {
@@ -110,6 +199,12 @@ async function runChat(message) {
 }
 
 const server = createServer((req, res) => {
+  if (req.method === "GET" && req.url === "/providers") {
+    const list = PROVIDERS.map((p) => ({ id: p.id, label: p.label || p.id }));
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(list));
+    return;
+  }
+
   if (req.method !== "POST" || req.url !== "/chat") {
     res.writeHead(404).end();
     return;
@@ -119,12 +214,17 @@ const server = createServer((req, res) => {
   req.on("data", (chunk) => (body += chunk));
   req.on("end", async () => {
     try {
-      const { message } = JSON.parse(body);
+      const { message, provider: providerId } = JSON.parse(body);
       if (!message || typeof message !== "string") {
         res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ error: "message is required" }));
         return;
       }
-      const result = await runChat(message);
+      const provider = providerId ? PROVIDERS.find((p) => p.id === providerId) : PROVIDERS[0];
+      if (!provider) {
+        res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ error: `unknown provider "${providerId}"` }));
+        return;
+      }
+      const result = await runChat(message, provider);
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
     } catch (err) {
       console.error(err);

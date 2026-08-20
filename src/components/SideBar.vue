@@ -55,6 +55,14 @@
         >✨</button>
       </div>
 
+      <select
+        v-if="aiMode && providers.length > 1"
+        v-model="provider"
+        class="mt-1.5 w-full text-xs px-2 py-1 rounded border border-stone-200 bg-stone-50 text-stone-600 focus:outline-none focus:border-amber-400"
+      >
+        <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.label }}</option>
+      </select>
+
       <div
         v-if="aiMode && aiReply"
         class="absolute left-4 right-4 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
@@ -137,12 +145,12 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConfigStore } from '../stores/config'
 import { usePlayerStore } from '../stores/player'
 import { search } from '../api/subsonic'
-import { askAI } from '../api/chat'
+import { askAI, fetchProviders } from '../api/chat'
 import RecentPlays from './RecentPlays.vue'
 import { House, Mic2, Disc3, ListMusic } from 'lucide-vue-next'
 
@@ -174,7 +182,14 @@ const searchContainer = ref(null)
 const aiMode          = ref(false)
 const aiReply         = ref('')
 const aiSongs         = ref([])
+const providers       = ref([])
+const provider        = ref('')
 let debounceTimer     = null
+
+onMounted(async () => {
+  providers.value = await fetchProviders()
+  provider.value = providers.value[0]?.id || ''
+})
 
 function toggleAiMode() {
   aiMode.value = !aiMode.value
@@ -193,7 +208,7 @@ function onInput() {
 async function onEnter() {
   if (!aiMode.value || !query.value.trim()) return
   try {
-    const res = await askAI(query.value.trim())
+    const res = await askAI(query.value.trim(), provider.value)
     aiReply.value = res.reply || ''
     aiSongs.value = res.songs || []
   } catch (err) {

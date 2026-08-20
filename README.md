@@ -210,6 +210,88 @@ Commands/Deployment sections. See `mcp-server/README.md` for what it does,
 its tools, and setup. Its credentials file (`mcp-server/gonic.env`) is
 gitignored — never commit it.
 
+## Chat Server
+
+`chat-server/` is the backend for natural-language music search — the thing
+the app's chat box talks to. It is **not** the MCP server and shares no code
+with it: separate `package.json`, separate image, separate deployment. Do not
+confuse the two.
+
+**What it does.** Single file, `chat-server/index.js`, ~200 lines, no
+framework. Plain `node:http` server exposing two routes — `POST /chat`, taking
+`{ message, provider }` and returning `{ reply, songs, albums, artists }`, and
+`GET /providers`, returning `[{ id, label }]` for the client's picker. Nginx
+proxies both at `/chat-api/`.
+
+It runs a small agentic loop (`runChat`, max 4 turns): the LLM is given one
+tool, `search_music`, which the server implements as a Subsonic `search3`
+call against gonic (same token auth as everywhere else — `md5(password +
+salt)` per request). The LLM may call it several times to cover a request;
+results are accumulated into deduped maps keyed by id. The loop ends when the
+model replies with no tool call. The model's prose reply is deliberately kept
+to a sentence or two — the app renders the actual track/album/artist lists
+itself from the returned arrays.
+
+**Providers.** A list, not a single choice — the user picks one per request
+from a dropdown in the chat UI. Two kinds are supported: `anthropic` (the
+Anthropic SDK) and `openai` (any OpenAI-compatible `/chat/completions`
+endpoint — OpenAI, Groq, Together, OpenRouter, Ollama, vLLM). Anthropic's
+block format is the internal shape; the OpenAI path is translated at the edge
+in `callModel` — tool schemas (`input_schema` ↔ `function.parameters`),
+assistant tool calls, and `tool_result` → `tool` messages. Only
+`@anthropic-ai/sdk` is a dependency; the OpenAI path is a plain `fetch`.
+
+The list comes from `LLM_PROVIDERS`, a JSON array. The **first entry is the
+default** when a request names no provider. Each entry needs `id`, `model`
+and `kind`; `label` (defaults to `id`) is what the dropdown shows; `baseUrl`
+(default `https://api.openai.com/v1`) and `apiKeyEnv` (default
+`OPENAI_API_KEY`) apply to `openai` entries, so several providers can each
+carry their own key.
+
+```json
+[
+  { "id": "claude", "label": "Claude Haiku", "kind": "anthropic", "model": "claude-haiku-4-5" },
+  { "id": "gpt",    "label": "GPT-4o mini",  "kind": "openai",    "model": "gpt-4o-mini" },
+  { "id": "llama",  "label": "Llama 3 (local)", "kind": "openai", "model": "llama3",
+    "baseUrl": "http://ollama:11434/v1", "apiKeyEnv": "OLLAMA_API_KEY" }
+]
+```
+
+Unset `LLM_PROVIDERS` falls back to a single Claude Haiku entry, so the
+default deployment behaves as it always did. Startup fails fast on malformed
+JSON, a bad entry, or a missing key for any listed provider — a provider you
+can pick in the UI is one the server has already proved it can authenticate.
+
+| Env var | Default | Notes |
+|---|---|---|
+| `LLM_PROVIDERS` | one Claude Haiku entry | JSON array, first entry is the default |
+| `ANTHROPIC_API_KEY` | — | Required if any entry is `kind: "anthropic"` |
+| `OPENAI_API_KEY` | — | Required for `openai` entries with no `apiKeyEnv` |
+| `GONIC_URL`, `GONIC_USERNAME`, `GONIC_PASSWORD` | — | Always required |
+| `PORT` | `8090` | |
+
+**Client.** `src/api/chat.js` exports `fetchProviders()` and `askAI(message,
+provider)`. Both chat UIs — `SideBar.vue` (desktop) and `Search.vue` (mobile)
+— load the list on mount, default to the first entry, and render a `<select>`
+only when more than one provider is configured, so a single-provider
+deployment shows no extra UI.
+
+**Deployment.** `k8s/chat-server.yaml` — Deployment + Service in namespace
+`webapps`, image `ghcr.io/xkogd66/chat-server:latest`, port 8090, env pulled
+from the `chat-server-secret` secret.
+
+`LLM_PROVIDERS` there lists four providers — Claude, **Ollama**, **Gemini**,
+**DeepSeek**. The last three are `kind: "openai"`, so they need no code
+change, only a `model` and a key; they still carry `REPLACE_ME` as the model
+and will fail on use until that is set. Startup validation refuses to offer a
+provider it cannot authenticate, so every key in `LLM_PROVIDERS` must exist in
+the secret or the pod crashloops — drop a provider from the list rather than
+leaving its key blank.
+
+`k8s/chat-server-secret.example.yaml` is the template for that secret: copy it
+to `chat-server-secret.yaml`, fill it in, apply. **Never commit the filled
+copy** — attic-music is a public repo with CI.
+
 ## Deployment
 
 ### Docker

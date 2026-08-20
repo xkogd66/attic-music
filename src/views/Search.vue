@@ -34,6 +34,13 @@
           class="flex-shrink-0 px-4 rounded-lg bg-amber-500 text-white text-sm font-medium active:bg-amber-600 transition-colors"
         >Send</button>
       </form>
+      <select
+        v-if="aiMode && providers.length > 1"
+        v-model="provider"
+        class="mt-2 text-xs px-2 py-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-600 focus:outline-none focus:border-amber-400"
+      >
+        <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.label }}</option>
+      </select>
     </div>
 
     <div class="flex-1 overflow-y-auto pb-40">
@@ -101,7 +108,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { search } from '../api/subsonic'
-import { askAI } from '../api/chat'
+import { askAI, fetchProviders } from '../api/chat'
 import { usePlayerStore } from '../stores/player'
 import TrackItem from '../components/TrackItem.vue'
 
@@ -116,8 +123,14 @@ let debounceTimer = null
 const aiMode  = ref(false)
 const aiReply = ref('')
 const aiSongs = ref([])
+const providers = ref([])
+const provider  = ref('')
 
-onMounted(() => inputEl.value?.focus())
+onMounted(async () => {
+  inputEl.value?.focus()
+  providers.value = await fetchProviders()
+  provider.value = providers.value[0]?.id || ''
+})
 
 function toggleAiMode() {
   aiMode.value = !aiMode.value
@@ -139,7 +152,7 @@ async function onEnter() {
   if (!aiMode.value || !query.value.trim()) return
   searching.value = true
   try {
-    const res = await askAI(query.value.trim())
+    const res = await askAI(query.value.trim(), provider.value)
     aiReply.value = res.reply || ''
     aiSongs.value = res.songs || []
   } catch (err) {

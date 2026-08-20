@@ -25,6 +25,38 @@ spec:
                 secretKeyRef:
                   name: chat-server-secret
                   key: ANTHROPIC_API_KEY
+            # ── Multi-provider picker (placeholders) ───────────────────────
+            # Uncommenting LLM_PROVIDERS makes the dropdown appear in the chat
+            # UI. The server exits at startup if a listed provider's key env
+            # var is missing, so add each provider's key below at the same
+            # time — the pod will crashloop otherwise. Ollama needs no real
+            # key, but the var must exist and be non-empty.
+            - name: LLM_PROVIDERS
+              value: |
+                [
+                  { "id": "claude",   "label": "Claude Haiku", "kind": "anthropic", "model": "claude-haiku-4-5" },
+                  { "id": "ollama",   "label": "Ollama (local)", "kind": "openai", "model": "REPLACE_ME",
+                    "baseUrl": "http://ollama.webapps.svc.cluster.local:11434/v1", "apiKeyEnv": "OLLAMA_API_KEY" },
+                  { "id": "gemini",   "label": "Gemini", "kind": "openai", "model": "REPLACE_ME",
+                    "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "apiKeyEnv": "GEMINI_API_KEY" },
+                  { "id": "deepseek", "label": "DeepSeek", "kind": "openai", "model": "REPLACE_ME",
+                    "baseUrl": "https://api.deepseek.com/v1", "apiKeyEnv": "DEEPSEEK_API_KEY" }
+                ]
+            - name: OLLAMA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: OLLAMA_API_KEY
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: GEMINI_API_KEY
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: DEEPSEEK_API_KEY
             - name: GONIC_URL
               valueFrom:
                 secretKeyRef:
