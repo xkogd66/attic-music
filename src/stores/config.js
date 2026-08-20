@@ -22,28 +22,17 @@ export const useConfigStore = defineStore('config', () => {
       if (cfg.turnstileSiteKey) turnstileSiteKey.value = cfg.turnstileSiteKey
     } catch(e) {}
 
-    // Then overlay saved password from localStorage
-    try {
-      const saved = localStorage.getItem('attic_cfg')
-      if (saved) {
-        const c = JSON.parse(saved)
-        if (c.password) password.value = c.password
-        if (c.server)   server.value   = c.server
-        loggedIn.value = true
-      }
-    } catch(e) {}
+    // No session is restored: credentials live in memory only, so a reload or a
+    // new tab always requires logging in again. Clear any entry written by an
+    // older build so a plaintext password doesn't linger on disk.
+    try { localStorage.removeItem('attic_cfg') } catch(e) {}
   }
 
   function saveSession() {
-    localStorage.setItem('attic_cfg', JSON.stringify({
-      server:   server.value,
-      password: password.value,
-    }))
     loggedIn.value = true
   }
 
   function logout() {
-    localStorage.removeItem('attic_cfg')
     password.value = ''
     loggedIn.value = false
   }

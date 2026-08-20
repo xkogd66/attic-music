@@ -1,26 +1,29 @@
 <template>
   <div v-if="ready" class="h-screen flex flex-col bg-stone-50 text-stone-900 overflow-hidden">
 
-    <!-- DESKTOP: sidebar + content -->
-    <div class="hidden md:flex flex-1 overflow-hidden">
-      <SideBar />
-      <main class="flex-1 flex flex-col overflow-hidden">
+    <!-- Logged out: the login screen is all that exists. The library layout is
+         not rendered at all, so nothing behind it can mount or fetch. -->
+    <template v-if="config.loggedIn">
+
+      <!-- DESKTOP: sidebar + content -->
+      <div class="hidden md:flex flex-1 overflow-hidden">
+        <SideBar />
+        <main class="flex-1 flex flex-col overflow-hidden">
+          <RouterView />
+        </main>
+      </div>
+
+      <!-- MOBILE: full width content -->
+      <div class="flex md:hidden flex-1 flex-col overflow-hidden">
         <RouterView />
-      </main>
-    </div>
+      </div>
 
-    <!-- MOBILE: full width content -->
-    <div class="flex md:hidden flex-1 flex-col overflow-hidden">
-      <RouterView />
-    </div>
+      <!-- PLAYER (handles desktop footer + mobile mini/full/bottomnav internally) -->
+      <Player />
 
-    <!-- PLAYER (handles desktop footer + mobile mini/full/bottomnav internally) -->
-    <Player v-if="config.loggedIn" />
+    </template>
 
-    <!-- LOGIN (shown over everything when not logged in) -->
-    <div v-if="!config.loggedIn" class="fixed inset-0 z-50">
-      <RouterView />
-    </div>
+    <RouterView v-else />
 
   </div>
 </template>

@@ -75,8 +75,16 @@ src/
 
 ### Auth & Config
 - On load, the app fetches `/config.json` for server-provisioned settings (Last.fm API key, optional pre-configured server)
-- User credentials are persisted to `localStorage` under key `attic_cfg`
-- Route guards block all routes until `config.loggedIn` is true
+- **Credentials are never persisted.** They live in the Pinia store in memory
+  only, so every reload and every new tab requires logging in again. There is
+  deliberately no "remember me" — an earlier build stored the password in
+  plaintext under `localStorage.attic_cfg`, and `load()` now deletes that key
+  on startup to clear it from machines that still have one.
+- `Login.vue` verifies credentials with a real `ping()` against the server
+  before `saveSession()` sets `loggedIn`; a failed ping never logs you in
+- Route guards block all routes until `config.loggedIn` is true, and `App.vue`
+  renders the library layout only when `loggedIn` — logged out, the login
+  screen is the entire component tree, so nothing behind it can mount or fetch
 - In CI, the GHA workflow writes `public/config.json` (including `lastfmKey` from the `LASTFM_API_KEY` GitHub Actions secret) before the Docker image is built, so the key is baked into the image as a static file served by Nginx
 
 ### Routing
