@@ -22,7 +22,7 @@
               >
                 <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                  <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img loading="lazy" :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
               </div>
@@ -40,7 +40,7 @@
               >
                 <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                  <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img loading="lazy" :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
               </div>
@@ -58,7 +58,7 @@
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center text-3xl">💿</div>
-                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img loading="lazy" :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
                 <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
@@ -85,7 +85,7 @@
               >
                 <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                  <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img loading="lazy" :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
               </div>
@@ -106,7 +106,7 @@
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img loading="lazy" :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
                 <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
@@ -128,7 +128,7 @@
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img loading="lazy" :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
                 <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
