@@ -231,7 +231,7 @@
           >
             <div class="aspect-square bg-amber-50 mb-1 overflow-hidden relative rounded">
               <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-              <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="onAlbumCoverError($event, album)" />
+              <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
               <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
                 <button class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs pl-0.5" @click.stop="playAlbum(album)">▶</button>
               </div>
@@ -856,25 +856,8 @@ async function openAlbum(album) {
   } finally { loading.value = false }
 }
 
-function onAlbumCoverError(e, album) {
-  const img = e.target
-  if (!img.dataset.triedSidecar) {
-    img.dataset.triedSidecar = '1'
-    const artist = album.albumArtist || album.artist
-    img.src = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album.name)}`
-  } else {
-    img.style.display = 'none'
-  }
-}
-
 function onAlbumDetailCoverError() {
-  if (albumDetailCoverState.value === 'loading') {
-    const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
-    albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(currentAlbum.value.name)}`
-    albumDetailCoverState.value = 'sidecar'
-  } else {
-    albumDetailCoverState.value = 'failed'
-  }
+  albumDetailCoverState.value = 'failed'
 }
 
 async function uploadAlbumCover(e) {
