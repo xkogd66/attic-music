@@ -161,14 +161,17 @@
         <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <template v-else>
 
-          <!-- BROWSE MODE: 2 carousels (no search, no filter active) -->
-          <template v-if="!mobileQuery && !filterGenre && !filterYear">
+          <!-- BROWSE MODE: 2 static rows of 4 (no search, no filter, not showing all) -->
+          <template v-if="!mobileQuery && !filterGenre && !filterYear && !showAllArtists">
             <div v-if="recentArtists.length" class="pt-5 mb-6">
-              <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
-              <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-                <div v-for="artist in recentArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:28%" @click="openArtist(artist)">
+              <div class="px-4 flex items-center justify-between mb-3">
+                <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recently Added</span>
+                <button class="text-xs font-medium text-amber-700" @click="showAllArtists = true">Show all ›</button>
+              </div>
+              <div class="px-4 grid grid-cols-4 gap-2">
+                <div v-for="artist in recentArtists.slice(0, 4)" :key="artist.id" class="cursor-pointer" @click="openArtist(artist)">
                   <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
-                    <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
+                    <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                     <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                   </div>
                   <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
@@ -176,11 +179,14 @@
               </div>
             </div>
             <div v-if="discoverArtists.length" class="mb-6">
-              <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Artists</div>
-              <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-                <div v-for="artist in discoverArtists" :key="artist.id" class="flex-none cursor-pointer" style="width:28%" @click="openArtist(artist)">
+              <div class="px-4 flex items-center justify-between mb-3">
+                <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Discover Artists</span>
+                <button class="text-xs font-medium text-amber-700" @click="showAllArtists = true">Show all ›</button>
+              </div>
+              <div class="px-4 grid grid-cols-4 gap-2">
+                <div v-for="artist in discoverArtists.slice(0, 4)" :key="artist.id" class="cursor-pointer" @click="openArtist(artist)">
                   <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
-                    <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
+                    <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
                     <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                   </div>
                   <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
@@ -189,8 +195,13 @@
             </div>
           </template>
 
-          <!-- SEARCH / FILTER MODE: alphabetical contact list -->
+          <!-- SEARCH / FILTER / SHOW ALL: alphabetical contact list -->
           <template v-else>
+            <button
+              v-if="showAllArtists && !mobileQuery && !filterGenre && !filterYear"
+              class="px-4 pt-4 pb-2 text-xs font-medium text-amber-700"
+              @click="showAllArtists = false"
+            >‹ Back</button>
             <div v-if="mobileFilteredIndex.length">
               <template v-for="group in mobileFilteredIndex" :key="group.name">
                 <div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-amber-700 bg-stone-50 border-b border-stone-100">{{ group.name }}</div>
@@ -531,6 +542,7 @@ function goToLetter(letter) {
 const recentArtists   = ref([])
 const discoverArtists = ref([])
 const mobileQuery     = ref('')
+const showAllArtists  = ref(false)   // mobile: "Show all" swaps the rows for the A–Z list
 
 const mobileFilteredIndex = computed(() => {
   const q = mobileQuery.value.toLowerCase().trim()

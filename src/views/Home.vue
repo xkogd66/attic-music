@@ -1,7 +1,8 @@
 <template>
   <div class="flex flex-col h-full overflow-hidden">
-    <div class="px-4 py-3 border-b border-stone-200 bg-white flex-shrink-0 md:hidden">
-      <span class="text-sm font-semibold">Home</span>
+    <div class="px-4 py-3 border-b border-stone-200 bg-white flex-shrink-0 md:hidden flex items-center gap-2">
+      <img src="/favicon.svg" alt="" class="w-6 h-6" />
+      <span class="font-serif text-lg font-semibold">attic music</span>
     </div>
     <div class="flex-1 overflow-y-auto pb-40 md:pb-6">
       <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
