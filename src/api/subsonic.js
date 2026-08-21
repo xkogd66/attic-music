@@ -152,8 +152,8 @@ export async function getAlbum(id) {
   }
 }
 
-export async function getAlbumPage(size = 100, offset = 0) {
-  const data = await request('getAlbumList2', { type: 'alphabeticalByName', size, offset })
+export async function getAlbumPage(size = 100, offset = 0, type = 'alphabeticalByName') {
+  const data = await request('getAlbumList2', { type, size, offset })
   return ensureArray(data.albumList2?.album)
 }
 

@@ -65,6 +65,16 @@
             @click="filterGenre = null; filterYear = null; albumQuery = ''"
           >Clear</button>
         </div>
+
+        <!-- MOBILE SORT -->
+        <div class="md:hidden flex gap-1.5 mt-2">
+          <button
+            v-for="s in SORTS" :key="s.id"
+            class="text-xs border px-2.5 py-1.5 rounded transition-all"
+            :class="sort === s.id ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600'"
+            @click="sort = s.id"
+          >{{ s.label }}</button>
+        </div>
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto pb-40 md:pb-24">
 
@@ -102,29 +112,6 @@
           </div>
         </div>
 
-        <!-- RECENTLY ADDED (mobile static row) -->
-        <div v-if="recentAlbums.length" class="md:hidden px-4 pt-5 pb-4 border-b border-stone-100"
-          :class="{ hidden: albumQuery || filterGenre || filterYear || showAllAlbums }">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recently Added</span>
-            <button class="text-xs font-medium text-amber-700" @click="showAllAlbums = true">Show all ›</button>
-          </div>
-          <div class="grid grid-cols-4 gap-2">
-            <div
-              v-for="album in recentAlbums.slice(0, 4)" :key="album.id"
-              class="cursor-pointer"
-              @click="openAlbum(album)"
-            >
-              <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
-                <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-                <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="onAlbumCoverError($event, album)" />
-              </div>
-              <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-              <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.artist }}</div>
-            </div>
-          </div>
-        </div>
-
         <!-- DISCOVER (desktop) -->
         <div v-if="discoverAlbums.length" class="hidden md:block px-4 pt-5 pb-4 border-b border-stone-100">
           <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover</div>
@@ -147,46 +134,15 @@
           </div>
         </div>
 
-        <!-- DISCOVER (mobile static row) -->
-        <div v-if="discoverAlbums.length" class="md:hidden px-4 pt-5 pb-4 border-b border-stone-100"
-          :class="{ hidden: albumQuery || filterGenre || filterYear || showAllAlbums }">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Discover</span>
-            <button class="text-xs font-medium text-amber-700" @click="showAllAlbums = true">Show all ›</button>
-          </div>
-          <div class="grid grid-cols-4 gap-2">
-            <div
-              v-for="album in discoverAlbums.slice(0, 4)" :key="album.id"
-              class="cursor-pointer"
-              @click="openAlbum(album)"
-            >
-              <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
-                <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-                <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="onAlbumCoverError($event, album)" />
-              </div>
-              <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-              <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.albumArtist || album.artist }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BACK OUT OF "SHOW ALL" (mobile) -->
-        <button
-          v-if="showAllAlbums && !albumQuery && !filterGenre && !filterYear"
-          class="md:hidden px-4 pt-4 text-xs font-medium text-amber-700"
-          @click="showAllAlbums = false"
-        >‹ Back</button>
-
-        <!-- ALL ALBUMS GRID -->
-        <div class="px-4 py-4"
-          :class="{ 'hidden md:block': !albumQuery && !filterGenre && !filterYear && !showAllAlbums }">
+        <!-- ALL ALBUMS GRID — mobile shows 4 up, desktop keeps its auto-fill grid -->
+        <div class="px-4 py-4">
           <div v-if="loading && !albums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
           <div v-else-if="!albums.length" class="flex flex-col items-center justify-center py-24 text-stone-600 gap-2">
             <span class="text-4xl">💿</span>
             <span class="font-serif text-lg">No albums found</span>
           </div>
           <div v-else-if="!filteredAlbums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">No albums match the filter.</div>
-          <div v-else class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr))">
+          <div v-else class="grid gap-2 md:gap-4 grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(100px,1fr))]">
             <div
               v-for="album in filteredAlbums" :key="album.id"
               class="cursor-pointer group"
@@ -435,7 +391,14 @@ const loading        = ref(false)
 const albums         = ref([])
 const recentAlbums   = ref([])
 const discoverAlbums = ref([])
-const showAllAlbums  = ref(false)   // mobile: "Show all" swaps the rows for the full grid
+// Mobile sort modes. The ids ARE the Subsonic getAlbumList2 types, so switching
+// sort just re-pages the list from the server — no client-side re-sorting.
+const SORTS = [
+  { id: 'alphabeticalByName', label: 'A–Z'      },
+  { id: 'newest',             label: 'Added'    },
+  { id: 'random',             label: 'Discover' },
+]
+const sort = ref('alphabeticalByName')
 const currentAlbum = ref(null)
 const albumTracks  = ref([])
 const showLocation = ref(false)
@@ -681,13 +644,17 @@ async function loadAlbums() {
   setupObserver()
 }
 
+watch(sort, () => loadAlbums())
+
 async function loadMore() {
   if (loading.value || allLoaded.value) return
   loading.value = true
   try {
-    const page = await getAlbumPage(pageSize, pageOffset)
+    const page = await getAlbumPage(pageSize, pageOffset, sort.value)
     albums.value.push(...page)
-    if (page.length < pageSize) allLoaded.value = true
+    // ponytail: 'random' hands back a fresh sample per request, so paging it would
+    // repeat albums — take one page and stop. Raise pageSize if one page is too few.
+    if (sort.value === 'random' || page.length < pageSize) allLoaded.value = true
     else pageOffset += pageSize
   } finally {
     loading.value = false

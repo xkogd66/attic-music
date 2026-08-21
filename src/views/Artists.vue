@@ -111,6 +111,16 @@
             </div>
           </div>
         </div>
+
+        <!-- MOBILE SORT -->
+        <div class="flex gap-1.5 mt-2">
+          <button
+            v-for="s in SORTS" :key="s.id"
+            class="text-xs border px-2.5 py-1.5 rounded transition-all"
+            :class="sort === s.id ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600'"
+            @click="sort = s.id"
+          >{{ s.label }}</button>
+        </div>
       </div>
 
       <!-- ── DESKTOP CONTENT ── -->
@@ -160,67 +170,22 @@
       <div class="md:hidden flex-1 overflow-y-auto pb-40">
         <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <template v-else>
-
-          <!-- BROWSE MODE: 2 static rows of 4 (no search, no filter, not showing all) -->
-          <template v-if="!mobileQuery && !filterGenre && !filterYear && !showAllArtists">
-            <div v-if="recentArtists.length" class="pt-5 mb-6">
-              <div class="px-4 flex items-center justify-between mb-3">
-                <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recently Added</span>
-                <button class="text-xs font-medium text-amber-700" @click="showAllArtists = true">Show all ›</button>
+          <div v-if="!mobileArtists.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">No artists found</div>
+          <div v-else class="px-4 py-4 grid grid-cols-4 gap-2">
+            <div v-for="artist in mobileArtists" :key="artist.id" class="cursor-pointer" @click="openArtist(artist)">
+              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
+                <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
+                <img
+                  :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`"
+                  :alt="artist.name"
+                  loading="lazy"
+                  class="absolute inset-0 w-full h-full object-cover"
+                  @error="e => e.target.style.display='none'"
+                />
               </div>
-              <div class="px-4 grid grid-cols-4 gap-2">
-                <div v-for="artist in recentArtists.slice(0, 4)" :key="artist.id" class="cursor-pointer" @click="openArtist(artist)">
-                  <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
-                    <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                    <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
-                  </div>
-                  <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
-                </div>
-              </div>
+              <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
             </div>
-            <div v-if="discoverArtists.length" class="mb-6">
-              <div class="px-4 flex items-center justify-between mb-3">
-                <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Discover Artists</span>
-                <button class="text-xs font-medium text-amber-700" @click="showAllArtists = true">Show all ›</button>
-              </div>
-              <div class="px-4 grid grid-cols-4 gap-2">
-                <div v-for="artist in discoverArtists.slice(0, 4)" :key="artist.id" class="cursor-pointer" @click="openArtist(artist)">
-                  <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
-                    <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                    <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
-                  </div>
-                  <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- SEARCH / FILTER / SHOW ALL: alphabetical contact list -->
-          <template v-else>
-            <button
-              v-if="showAllArtists && !mobileQuery && !filterGenre && !filterYear"
-              class="px-4 pt-4 pb-2 text-xs font-medium text-amber-700"
-              @click="showAllArtists = false"
-            >‹ Back</button>
-            <div v-if="mobileFilteredIndex.length">
-              <template v-for="group in mobileFilteredIndex" :key="group.name">
-                <div class="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-amber-700 bg-stone-50 border-b border-stone-100">{{ group.name }}</div>
-                <div
-                  v-for="artist in group.artist" :key="artist.id"
-                  class="flex items-center gap-3 px-4 py-2 border-b border-stone-100 active:bg-stone-50 cursor-pointer"
-                  @click="openArtist(artist)"
-                >
-                  <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 bg-stone-100 relative">
-                    <div class="w-full h-full flex items-center justify-center font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                    <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
-                  </div>
-                  <span class="text-sm font-medium truncate">{{ artist.name }}</span>
-                </div>
-              </template>
-            </div>
-            <div v-else class="flex items-center justify-center py-24 text-stone-600 text-sm">No artists found</div>
-          </template>
-
+          </div>
         </template>
       </div>
 
@@ -542,15 +507,41 @@ function goToLetter(letter) {
 const recentArtists   = ref([])
 const discoverArtists = ref([])
 const mobileQuery     = ref('')
-const showAllArtists  = ref(false)   // mobile: "Show all" swaps the rows for the A–Z list
+// Mobile sort modes. getArtists() has no server-side ordering beyond alphabetical,
+// so 'added' and 'random' are ordered here over the full in-memory index.
+const SORTS = [
+  { id: 'az',     label: 'A–Z'      },
+  { id: 'added',  label: 'Added'    },
+  { id: 'random', label: 'Discover' },
+]
+const sort        = ref('az')
+const addedOrder  = ref([])   // artist ids, newest-album order
+const randomOrder = ref({})   // artist id -> sort key, re-rolled when Discover is picked
 
-const mobileFilteredIndex = computed(() => {
+const addedRank = computed(() => new Map(addedOrder.value.map((id, i) => [id, i])))
+
+watch(sort, (s) => {
+  if (s !== 'random') return
+  const o = {}
+  for (const group of artistIndex.value) for (const a of group.artist) o[a.id] = Math.random()
+  randomOrder.value = o
+})
+
+// The mobile grid: every artist, filtered by search + genre/year, in the chosen order.
+const mobileArtists = computed(() => {
   const q = mobileQuery.value.toLowerCase().trim()
-  const base = filteredArtistIndex.value
-  if (!q) return base
-  return base
-    .map(g => ({ ...g, artist: g.artist.filter(a => a.name.toLowerCase().includes(q)) }))
-    .filter(g => g.artist.length)
+  let list = filteredArtists.value ?? artistIndex.value.flatMap(g => g.artist)
+  if (q) list = list.filter(a => a.name.toLowerCase().includes(q))
+  if (sort.value === 'added') {
+    const rank = addedRank.value
+    return [...list].sort((a, b) =>
+      (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity) || a.name.localeCompare(b.name))
+  }
+  if (sort.value === 'random') {
+    const o = randomOrder.value
+    return [...list].sort((a, b) => (o[a.id] ?? 0) - (o[b.id] ?? 0))
+  }
+  return list   // artistIndex is already alphabetical
 })
 
 const artistGenreMap    = ref({})  // artistId -> { genres: Set, years: Set }
@@ -1055,10 +1046,10 @@ onMounted(async () => {
     if (album.artistId && !seen.has(album.artistId)) {
       seen.add(album.artistId)
       artists.push({ id: album.artistId, name: album.albumArtist || album.artist })
-      if (artists.length >= 20) break
     }
   }
-  recentArtists.value = artists
+  addedOrder.value    = artists.map(a => a.id)
+  recentArtists.value = artists.slice(0, 20)
   if (route.params.id) openArtistById(route.params.id)
 })
 </script>
