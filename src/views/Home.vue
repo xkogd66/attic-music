@@ -7,59 +7,134 @@
       <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
       <template v-else>
 
-        <!-- Recently Added Artists -->
-        <div v-if="recentArtists.length" class="pt-5 mb-6">
-          <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
-          <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-            <div
-              v-for="artist in recentArtists" :key="artist.id"
-              class="flex-none cursor-pointer [width:28%] md:w-36"
-              @click="goToArtist(artist)"
-            >
-              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
-                <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+        <!-- ══ DESKTOP: carousels ══ -->
+        <div class="hidden md:block">
+
+          <!-- Recently Added Artists -->
+          <div v-if="recentArtists.length" class="pt-5 mb-6">
+            <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
+            <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+              <div
+                v-for="artist in recentArtists" :key="artist.id"
+                class="flex-none cursor-pointer w-36"
+                @click="goToArtist(artist)"
+              >
+                <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
+                  <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                </div>
+                <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
               </div>
-              <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
             </div>
           </div>
+
+          <!-- Discover Artists -->
+          <div v-if="discoverArtists.length" class="mb-6">
+            <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Artists</div>
+            <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+              <div
+                v-for="artist in discoverArtists" :key="artist.id"
+                class="flex-none cursor-pointer w-36"
+                @click="goToArtist(artist)"
+              >
+                <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
+                  <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                </div>
+                <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discover Albums -->
+          <div v-if="discoverAlbums.length" class="mb-6">
+            <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Albums</div>
+            <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+              <div
+                v-for="album in discoverAlbums" :key="album.id"
+                class="flex-none cursor-pointer w-36"
+                @click="goToAlbum(album)"
+              >
+                <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center text-3xl">💿</div>
+                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                </div>
+                <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
+                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <!-- Discover Artists -->
-        <div v-if="discoverArtists.length" class="mb-6">
-          <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Artists</div>
-          <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-            <div
-              v-for="artist in discoverArtists" :key="artist.id"
-              class="flex-none cursor-pointer [width:28%] md:w-36"
-              @click="goToArtist(artist)"
-            >
-              <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
-                <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
-                <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
-              </div>
-              <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
-            </div>
-          </div>
-        </div>
+        <!-- ══ MOBILE: three static rows of four ══ -->
+        <div class="md:hidden">
 
-        <!-- Discover Albums -->
-        <div v-if="discoverAlbums.length" class="mb-6">
-          <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Albums</div>
-          <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
-            <div
-              v-for="album in discoverAlbums" :key="album.id"
-              class="flex-none cursor-pointer [width:28%] md:w-36"
-              @click="goToAlbum(album)"
-            >
-              <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
-                <div class="w-full h-full flex items-center justify-center text-3xl">💿</div>
-                <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+          <!-- Recently Added Artists -->
+          <div v-if="recentArtists.length" class="pt-5 mb-6">
+            <div class="px-4 flex items-center justify-between mb-3">
+              <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recently Added Artists</span>
+              <RouterLink to="/artists" class="text-xs font-medium text-amber-700">Show all ›</RouterLink>
+            </div>
+            <div class="px-4 grid grid-cols-4 gap-2">
+              <div
+                v-for="artist in recentArtists.slice(0, 4)" :key="artist.id"
+                class="cursor-pointer"
+                @click="goToArtist(artist)"
+              >
+                <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
+                  <img :src="`/artist-images/avatar?name=${encodeURIComponent(artist.name)}`" :alt="artist.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                </div>
+                <div class="text-xs font-medium truncate leading-tight text-center">{{ artist.name }}</div>
               </div>
-              <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-              <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
             </div>
           </div>
+
+          <!-- Recently Added Albums -->
+          <div v-if="recentAlbums.length" class="mb-6">
+            <div class="px-4 flex items-center justify-between mb-3">
+              <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recently Added Albums</span>
+              <RouterLink to="/albums" class="text-xs font-medium text-amber-700">Show all ›</RouterLink>
+            </div>
+            <div class="px-4 grid grid-cols-4 gap-2">
+              <div
+                v-for="album in recentAlbums.slice(0, 4)" :key="album.id"
+                class="cursor-pointer"
+                @click="goToAlbum(album)"
+              >
+                <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
+                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                </div>
+                <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
+                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discover Albums -->
+          <div v-if="discoverAlbums.length" class="mb-6">
+            <div class="px-4 flex items-center justify-between mb-3">
+              <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Discover Albums</span>
+              <RouterLink to="/albums" class="text-xs font-medium text-amber-700">Show all ›</RouterLink>
+            </div>
+            <div class="px-4 grid grid-cols-4 gap-2">
+              <div
+                v-for="album in discoverAlbums.slice(0, 4)" :key="album.id"
+                class="cursor-pointer"
+                @click="goToAlbum(album)"
+              >
+                <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
+                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                </div>
+                <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
+                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </template>
@@ -76,6 +151,7 @@ const router = useRouter()
 
 const loading         = ref(true)
 const recentArtists   = ref([])
+const recentAlbums    = ref([])
 const discoverArtists = ref([])
 const discoverAlbums  = ref([])
 
@@ -107,8 +183,9 @@ onMounted(async () => {
         if (artists.length >= 20) break
       }
     }
-    recentArtists.value  = artists
-    discoverAlbums.value = randomAlbums
+    recentArtists.value   = artists
+    recentAlbums.value    = newestAlbums
+    discoverAlbums.value  = randomAlbums
   } finally {
     loading.value = false
   }
