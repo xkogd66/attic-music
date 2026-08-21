@@ -101,7 +101,10 @@ src/
 - Dev server proxies `/rest` → `https://gonic.ekskog.net` (see `vite.config.js`)
 - Production traffic hits the server the user logs into directly from the browser
 - `search3` returns artists (5), albums (8), and songs (8); `getArtistGenreMap()` uses plain arrays (not Sets) for Vue reactivity
-- `getRandomAlbums(n)` is used for discovery carousels
+- `getRandomAlbums(n)` is used for the desktop discovery carousels and the Home page
+- `getAlbumPage(size, offset, type)` wraps `getAlbumList2`. `type` defaults to
+  `alphabeticalByName` and is what the mobile Albums sort chips switch between
+  (`alphabeticalByName` | `newest` | `random`)
 
 ### NFS File Structure
 - Subsonic indexes media from an NFS Share. The structure of the share is:
@@ -179,6 +182,17 @@ src/
 - Mobile: full-width content + mini player + full-screen player modal + bottom nav (5 tabs)
 - Breakpoint is Tailwind's `md:` (768px)
 
+#### iOS rules — do not "simplify" these away
+- The app root in `App.vue` is `h-[100dvh]`, **not** `h-screen` / `100vh`. On iOS
+  `100vh` is the viewport *without* the browser chrome, so the app lays out taller
+  than the visible area and the bottom nav ends up under Safari's toolbar.
+- `src/style.css` forces `input, select, textarea` to `font-size: 16px !important`
+  below the `md` breakpoint. WebKit zooms the page in whenever a focused control is
+  under 16px, and it does not zoom back out — every iOS browser is WebKit, so this
+  affects Safari, DDG and Edge alike. The `!important` is load-bearing: Vue scoped
+  styles are unlayered, so `Login.vue`'s `.input[data-v-…]` (specificity 0,2,0)
+  beats a bare `input` rule without it.
+
 ### Mobile Navigation (BottomNav)
 - 5 tabs: Home (House), Artists (Mic2), Albums (Disc3), Playlists (ListMusic), Search (Search) — all lucide icons
 - Active tab: amber; inactive: stone-400
@@ -186,21 +200,55 @@ src/
 
 ### Mobile Home Page (Home.vue)
 - Landing page for mobile; loads on app start (`/` redirects to `/home`)
-- Three horizontal swipe carousels: **Recently Added** (artists from newest albums), **Discover Artists** (random shuffle of all artists), **Discover Albums** (`getRandomAlbums(20)`)
-- Clicking an artist navigates to `/artists/:id`; clicking an album navigates to `/albums/:id`
-- Carousel card sizing: `w-full flex` on the scroll container + `width: calc(100% / 3 - 8px)` on each card. The `w-full` gives the flex container a definite width so `100%` in children resolves against the container's content width (not the sum of all items). The `-8px` deducts the proportional gap cost (2 × 12px ÷ 3).
+- Top bar is the app identity — `public/favicon.svg` (the record mark) + "attic music"
+  in the serif face — not a breadcrumb of the current route
+- **Three static rows of four, no horizontal scrolling anywhere**: **Recently Added
+  Artists** (distinct artists derived from `getNewestAlbums`), **Recently Added
+  Albums**, **Discover Albums** (`getRandomAlbums`)
+- Each row header carries a `Show all ›` link → `/artists` or `/albums`
+- Rows are `px-4 grid grid-cols-4 gap-2`; the views slice with `.slice(0, 4)`
+- All three rows are fed by the same three requests fired on mount — the carousels
+  were replaced without adding an API call
+- Desktop keeps its original three swipe carousels, wrapped in `hidden md:block`;
+  the mobile rows are `md:hidden`. The two never render at the same time.
+- Carousels were dropped on mobile because they were never used — three visible
+  items and a teasing sliver of a fourth, with everything else behind a swipe
 
 ### Mobile Artists Page (Artists.vue)
-- **Header** (mobile): search input + Genre dropdown + Year dropdown in one row. Genre/year filter data comes from `getArtistGenreMap()` (loaded async, uses plain arrays for Vue reactivity).
-- **Browse mode** (no search query and no filter active): shows Recently Added Artists carousel + Discover Artists carousel (no Discover Albums)
-- **Search/filter mode** (query or filter applied): alphabetical contact list with letter-group headers and avatar thumbnails
+- **Header** (mobile): search input + Genre dropdown + Year dropdown in one row, with
+  a sort-chip row beneath it. Genre/year filter data comes from `getArtistGenreMap()`
+  (loaded async, uses plain arrays for Vue reactivity).
+- **Sort chips**: `A–Z` | `Added` | `Discover`. `getArtists()` offers no server-side
+  ordering beyond alphabetical, so all three are ordered client-side over the full
+  in-memory index:
+  - `A–Z` — index order, already alphabetical
+  - `Added` — ranked via a `Map` built from the `getNewestAlbums(100)` artist order
+    (`addedOrder` / `addedRank`). Artists outside that window sort last, alphabetically.
+    Only artists appearing in the newest 100 albums have a real position.
+  - `Discover` — random sort keys re-rolled by a `watch` each time the chip is picked.
+    Rolling them inside the computed instead would reshuffle on every reactive read.
+- A single `mobileArtists` computed feeds one `grid-cols-4` grid: every artist,
+  filtered by the search box and genre/year, in the chosen order
+- Avatars carry `loading="lazy"` — the grid can render the entire library at once
+- **Gone on mobile**: the alphabetical contact list with letter-group headers, and the
+  two browse carousels. Searching now filters the grid in place.
 - Desktop: unchanged — letter nav + genre/year filters + expandable letter groups + carousels
 
 ### Albums Page (Albums.vue)
 - Genre and year filter dropdowns in the header (both mobile and desktop)
-- **Recently Added** carousel (swipe on mobile; arrow buttons desktop-only via `hidden md:flex`)
-- **Discover** carousel (random albums)
-- Full infinite-scroll album grid below (loaded in pages of 100 via `getAlbumPage`)
+- **Mobile sort chips**: `A–Z` | `Added` | `Discover`. Their ids *are* the
+  `getAlbumList2` types, so changing sort re-pages from the server (`loadAlbums()`
+  resets and refetches) rather than re-sorting on the client. Infinite scroll keeps
+  working in every mode.
+  - `Discover` (`random`) hands back a fresh sample per request, so paging it would
+    repeat albums. It loads one page and sets `allLoaded`. Marked with a `ponytail:`
+    comment in `loadMore()` — raise `pageSize` if one page is too few.
+- The album grid is always visible now (no show/hide juggling): `grid-cols-4` on
+  mobile, `auto-fill minmax(100px, 1fr)` at `md`
+- **Desktop only** (`hidden md:block`): the Recently Added carousel (with its arrow
+  buttons) and the Discover carousel
+- Full album list loads in pages of 100 via `getAlbumPage` + an IntersectionObserver
+  on a sentinel div
 - Clicking an artist name navigates to that artist in the Artists view
 
 ### Last.fm
