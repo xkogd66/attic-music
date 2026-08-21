@@ -3,3 +3,10 @@
 :root {
   --accent: #B85C38;
 }
+
+/* WebKit zooms the page in whenever a focused control is under 16px, and never
+   zooms back out — and the zoom is remembered per site. !important because it
+   has to beat both Tailwind utilities and scoped component classes. */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px !important; }
+}

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="ready" class="h-screen flex flex-col bg-stone-50 text-stone-900 overflow-hidden">
+  <div v-if="ready" class="h-[100dvh] flex flex-col bg-stone-50 text-stone-900 overflow-hidden">
 
     <!-- Logged out: the login screen is all that exists. The library layout is
          not rendered at all, so nothing behind it can mount or fetch. -->
