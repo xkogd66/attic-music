@@ -136,7 +136,7 @@
 
         <!-- ALL ALBUMS GRID — mobile shows 4 up, desktop keeps its auto-fill grid -->
         <div class="px-4 py-4">
-          <div v-if="loading && !albums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
+          <div v-if="loadingMore && !albums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
           <div v-else-if="!albums.length" class="flex flex-col items-center justify-center py-24 text-stone-600 gap-2">
             <span class="text-4xl">💿</span>
             <span class="font-serif text-lg">No albums found</span>
@@ -165,7 +165,7 @@
             </div>
           </div>
           <div ref="sentinel" class="h-8"></div>
-          <div v-if="loading && albums.length" class="flex items-center justify-center py-4 text-stone-600 text-sm">Loading…</div>
+          <div v-if="loadingMore && albums.length" class="flex items-center justify-center py-4 text-stone-600 text-sm">Loading…</div>
         </div>
 
 
@@ -606,6 +606,9 @@ const filteredAlbums = computed(() => {
 
 const sentinel   = ref(null)
 const allLoaded  = ref(false)
+// Paging has its own flag: `loading` is also owned by the album-detail view,
+// and sharing it made sentinel hits get dropped while an album was opening.
+const loadingMore = ref(false)
 const pageSize   = 100
 let   pageOffset = 0
 let   observer   = null
@@ -638,15 +641,13 @@ async function loadAlbums() {
   allLoaded.value = false
   pageOffset = 0
   await loadMore()
-  await nextTick()
-  setupObserver()
 }
 
 watch(sort, () => loadAlbums())
 
 async function loadMore() {
-  if (loading.value || allLoaded.value) return
-  loading.value = true
+  if (loadingMore.value || allLoaded.value) return
+  loadingMore.value = true
   try {
     const page = await getAlbumPage(pageSize, pageOffset, sort.value)
     albums.value.push(...page)
@@ -655,18 +656,34 @@ async function loadMore() {
     if (sort.value === 'random' || page.length < pageSize) allLoaded.value = true
     else pageOffset += pageSize
   } finally {
-    loading.value = false
+    loadingMore.value = false
   }
 }
 
-function setupObserver() {
-  if (observer) observer.disconnect()
-  if (!sentinel.value) return
-  observer = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) loadMore()
-  }, { threshold: 0.1 })
-  observer.observe(sentinel.value)
+// Keep paging until the sentinel is pushed off-screen. IntersectionObserver
+// only fires on threshold crossings, so one short page (a filtered grid, a tall
+// window) would leave it visible and never fire again.
+async function fillUntilOffscreen() {
+  while (!allLoaded.value && sentinel.value &&
+         sentinel.value.getBoundingClientRect().top < window.innerHeight) {
+    const before = albums.value.length
+    await loadMore()
+    if (albums.value.length === before) break
+    await nextTick()
+  }
 }
+
+// The sentinel node is destroyed every time the album detail replaces the list,
+// so observe whatever node the ref currently holds instead of a stale one.
+watch(sentinel, el => {
+  if (observer) observer.disconnect()
+  observer = null
+  if (!el) return
+  observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) fillUntilOffscreen()
+  }, { threshold: 0.1 })
+  observer.observe(el)
+})
 
 async function openAlbum(album) {
   loading.value = true
