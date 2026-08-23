@@ -776,6 +776,8 @@ async function chooseCover(c) {
   coverSaving.value = true
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
+  // Down goes the modal — the sidecar embeds into the mp3s in the background.
+  coverSearchOpen.value = false
   try {
     const blob = await (await fetch(c.url)).blob()
     const form = new FormData()
@@ -787,7 +789,6 @@ async function chooseCover(c) {
     if (res.ok) {
       albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
       albumDetailCoverState.value = 'sidecar'
-      coverSearchOpen.value = false
     }
   } catch (_) {
     /* leave modal open so the user can pick another */

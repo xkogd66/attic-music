@@ -49,32 +49,11 @@ async function lastfmCovers(artist, album) {
   return out
 }
 
-// Deezer (backup): album search via the existing proxy, largest cover per hit.
-async function deezerCovers(artist, album) {
-  try {
-    const res  = await fetch(`/deezer-api/search/album?q=${encodeURIComponent(`${artist} ${album}`)}&limit=10`)
-    const json = await res.json()
-    const out = []
-    const seen = new Set()
-    for (const a of ensureArray(json?.data)) {
-      const url = a.cover_xl || a.cover_big || a.cover_medium || a.cover
-      if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Deezer' }) }
-    }
-    return out
-  } catch (_) {
-    return []
-  }
-}
-
-// Aggregate cover candidates for an album — Last.fm first, Deezer as backup.
-// Returns [{ url, source }]. Both CDNs send Access-Control-Allow-Origin: *, so
+// Aggregate cover candidates for an album — Last.fm only.
+// Returns [{ url, source }]. The CDN sends Access-Control-Allow-Origin: *, so
 // the caller can fetch the chosen URL's bytes to re-upload as cover.jpg.
 export async function searchAlbumCovers(artist, album) {
-  const [lf, dz] = await Promise.all([
-    lastfmCovers(artist, album),
-    deezerCovers(artist, album),
-  ])
-  return [...lf, ...dz]
+  return lastfmCovers(artist, album)
 }
 
 // Last.fm artist images (artist.getInfo + artist.search), largest per hit.
@@ -102,30 +81,9 @@ async function lastfmArtistImages(name) {
   return out
 }
 
-// Deezer (backup): artist search via the existing proxy, largest picture per hit.
-async function deezerArtistImages(name) {
-  try {
-    const res  = await fetch(`/deezer-api/search/artist?q=${encodeURIComponent(name)}&limit=10`)
-    const json = await res.json()
-    const out = []
-    const seen = new Set()
-    for (const a of ensureArray(json?.data)) {
-      const url = a.picture_xl || a.picture_big || a.picture_medium || a.picture
-      if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Deezer' }) }
-    }
-    return out
-  } catch (_) {
-    return []
-  }
-}
-
 // Aggregate image candidates for an artist — same shape/behaviour as
-// searchAlbumCovers. Last.fm mostly returns placeholders (filtered out), so
-// Deezer is the effective source, exactly as with album covers.
+// searchAlbumCovers. Last.fm only, and it mostly returns placeholders (which
+// are filtered out), so this can legitimately come back empty.
 export async function searchArtistImages(name) {
-  const [lf, dz] = await Promise.all([
-    lastfmArtistImages(name),
-    deezerArtistImages(name),
-  ])
-  return [...lf, ...dz]
+  return lastfmArtistImages(name)
 }

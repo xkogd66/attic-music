@@ -16,11 +16,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/artist-images/, '')
       },
-      '/deezer-api': {
-        target: 'https://api.deezer.com',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/deezer-api/, '')
-      },
       '/chat-api': {
         target: 'http://localhost:8090',
         changeOrigin: true,

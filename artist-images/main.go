@@ -120,6 +120,51 @@ func buildMap(root string) {
 	log.Printf("indexed %d artist covers, %d album covers (%d dirs), %d artist dirs from %s", len(coverMap), len(albumCoverMap), len(albumDirMap), len(artistDirMap), root)
 }
 
+// embedCover writes img as the front-cover APIC frame of every .mp3 in dir,
+// replacing any picture already attached. It rewrites whole files, so callers
+// run it in its own goroutine and never block an HTTP response on it.
+// ponytail: fire-and-forget — no retry, no progress reporting, and a restart
+// mid-run leaves the remaining tracks un-embedded. Add a status endpoint keyed
+// by album dir if that ever needs to be observable.
+func embedCover(dir string, img []byte) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		log.Printf("embed: cannot read %s: %v", dir, err)
+		return
+	}
+	mime := http.DetectContentType(img)
+	start := time.Now()
+	done, failed := 0, 0
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".mp3") {
+			continue
+		}
+		file := filepath.Join(dir, e.Name())
+		tag, err := id3v2.Open(file, id3v2.Options{Parse: true})
+		if err != nil {
+			log.Printf("embed: open %s: %v", file, err)
+			failed++
+			continue
+		}
+		tag.DeleteFrames(tag.CommonID("Attached picture"))
+		tag.AddAttachedPicture(id3v2.PictureFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			MimeType:    mime,
+			PictureType: id3v2.PTFrontCover,
+			Description: "Front cover",
+			Picture:     img,
+		})
+		if err := tag.Save(); err != nil {
+			log.Printf("embed: save %s: %v", file, err)
+			failed++
+		} else {
+			done++
+		}
+		tag.Close()
+	}
+	log.Printf("embedded cover into %d mp3s (%d failed) in %s (%.1fs)", done, failed, dir, time.Since(start).Seconds())
+}
+
 // writeFrames opens an mp3 and overwrites the given ID3v2 text frames.
 // Keys are raw frame IDs (TALB, TPE1, TPE2, TIT2, TCON, TRCK, TDRC, TYER).
 // Empty values are skipped; existing frames of the same ID are replaced.
@@ -230,22 +275,24 @@ func main() {
 			return
 		}
 		defer file.Close()
-		dst := filepath.Join(dir, "cover.jpg")
-		out, err := os.Create(dst)
+		img, err := io.ReadAll(file)
 		if err != nil {
-			log.Printf("upload: failed to create %s: %v", dst, err)
-			http.Error(w, "failed to save file", http.StatusInternalServerError)
+			log.Printf("upload: failed to read upload: %v", err)
+			http.Error(w, "failed to read file", http.StatusBadRequest)
 			return
 		}
-		defer out.Close()
-		if _, err := io.Copy(out, file); err != nil {
+		dst := filepath.Join(dir, "cover.jpg")
+		if err := os.WriteFile(dst, img, 0644); err != nil {
 			log.Printf("upload: failed to write %s: %v", dst, err)
 			http.Error(w, "failed to write file", http.StatusInternalServerError)
 			return
 		}
 		albumCoverMap[key] = dst
 		log.Printf("uploaded cover for %q / %q → %s", artist, album, dst)
-		w.WriteHeader(http.StatusOK)
+		// Embedding rewrites every track in the album, so it runs detached and
+		// the client gets 202 as soon as cover.jpg is on disk.
+		go embedCover(dir, img)
+		w.WriteHeader(http.StatusAccepted)
 	})
 
 	// /upload-avatar writes a cover.jpg into the artist directory, serving as the
