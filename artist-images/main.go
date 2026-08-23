@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"image"
+	"image/jpeg"
 	"io"
 	"log"
 	"net/http"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bogem/id3v2/v2"
+	_ "golang.org/x/image/webp"
 )
 
 var coverMap      = map[string]string{}
@@ -118,6 +122,26 @@ func buildMap(root string) {
 	albumDirMap  = freshAlbumDirs
 	artistDirMap = freshArtistDirs
 	log.Printf("indexed %d artist covers, %d album covers (%d dirs), %d artist dirs from %s", len(coverMap), len(albumCoverMap), len(albumDirMap), len(artistDirMap), root)
+}
+
+// toJPEG re-encodes an image gonic cannot read. Gonic decodes only what Go's
+// stdlib registers (JPEG/PNG/GIF), so a WebP written as cover.jpg fails on every
+// request with "image: unknown format" — and Last.fm's CDN serves WebP by
+// default. Formats gonic already handles are passed through untouched.
+func toJPEG(img []byte) ([]byte, error) {
+	switch http.DetectContentType(img) {
+	case "image/jpeg", "image/png", "image/gif":
+		return img, nil
+	}
+	m, _, err := image.Decode(bytes.NewReader(img))
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, m, &jpeg.Options{Quality: 90}); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // embedCover writes img as the front-cover APIC frame of every .mp3 in dir,
@@ -281,6 +305,12 @@ func main() {
 			http.Error(w, "failed to read file", http.StatusBadRequest)
 			return
 		}
+		img, err = toJPEG(img)
+		if err != nil {
+			log.Printf("upload: cannot decode image for %q / %q: %v", artist, album, err)
+			http.Error(w, "unsupported image format", http.StatusBadRequest)
+			return
+		}
 		dst := filepath.Join(dir, "cover.jpg")
 		if err := os.WriteFile(dst, img, 0644); err != nil {
 			log.Printf("upload: failed to write %s: %v", dst, err)
@@ -322,15 +352,20 @@ func main() {
 			return
 		}
 		defer file.Close()
-		dst := filepath.Join(dir, "cover.jpg")
-		out, err := os.Create(dst)
+		img, err := io.ReadAll(file)
 		if err != nil {
-			log.Printf("upload-avatar: failed to create %s: %v", dst, err)
-			http.Error(w, "failed to save file", http.StatusInternalServerError)
+			log.Printf("upload-avatar: failed to read upload: %v", err)
+			http.Error(w, "failed to read file", http.StatusBadRequest)
 			return
 		}
-		defer out.Close()
-		if _, err := io.Copy(out, file); err != nil {
+		img, err = toJPEG(img)
+		if err != nil {
+			log.Printf("upload-avatar: cannot decode image for %q: %v", name, err)
+			http.Error(w, "unsupported image format", http.StatusBadRequest)
+			return
+		}
+		dst := filepath.Join(dir, "cover.jpg")
+		if err := os.WriteFile(dst, img, 0644); err != nil {
 			log.Printf("upload-avatar: failed to write %s: %v", dst, err)
 			http.Error(w, "failed to write file", http.StatusInternalServerError)
 			return
