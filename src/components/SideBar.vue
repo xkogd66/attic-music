@@ -21,6 +21,7 @@
           <RefreshCw :size="14" :class="{ 'animate-spin': scanning }" />
         </button>
       </div>
+      <div v-if="scanning" class="px-2 pb-2 text-xs text-stone-500">scanning…</div>
       <RouterLink
         v-for="item in navItems" :key="item.to"
         :to="item.to"
@@ -129,7 +130,7 @@ import { ref, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConfigStore } from '../stores/config'
 import { usePlayerStore } from '../stores/player'
-import { search, startScan } from '../api/subsonic'
+import { search, startScan, getScanStatus } from '../api/subsonic'
 import RecentPlays from './RecentPlays.vue'
 import AskAiModal from './AskAiModal.vue'
 import { House, Mic2, Disc3, ListMusic, RefreshCw } from 'lucide-vue-next'
@@ -151,17 +152,30 @@ function isActive(path) {
 }
 
 // Manual library rescan — gonic is never scanned automatically.
-// ponytail: gonic gives no completion signal, so the spinner only covers the
-// request itself, not the scan. Poll getScanStatus if that ever matters.
 const scanning = ref(false)
+let scanPoll   = null
+
 async function rescan() {
   if (scanning.value) return
   scanning.value = true
   try {
     await startScan()
+    scanPoll = setInterval(async () => {
+      try {
+        const data = await getScanStatus()
+        if (!data.scanStatus?.scanning) {
+          clearInterval(scanPoll)
+          scanPoll = null
+          scanning.value = false
+        }
+      } catch (_) {
+        clearInterval(scanPoll)
+        scanPoll = null
+        scanning.value = false
+      }
+    }, 30000)
   } catch (_) {
     /* gonic unreachable — nothing useful to show here */
-  } finally {
     scanning.value = false
   }
 }
@@ -214,7 +228,10 @@ function onDocClick(e) {
 }
 
 document.addEventListener('click', onDocClick)
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  if (scanPoll) clearInterval(scanPoll)
+})
 </script>
 
 <style scoped>
