@@ -9,7 +9,18 @@
 
     <!-- NAV -->
     <nav class="p-4 flex-shrink-0">
-      <div class="text-xs font-medium uppercase tracking-widest text-stone-600 px-2 py-2">Library</div>
+      <div class="flex items-center justify-between px-2 py-2">
+        <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Library</span>
+        <button
+          type="button"
+          class="text-stone-600 hover:text-amber-700 transition-colors disabled:opacity-40"
+          :title="scanning ? 'Scan requested…' : 'Rescan library'"
+          :disabled="scanning"
+          @click="rescan"
+        >
+          <RefreshCw :size="14" :class="{ 'animate-spin': scanning }" />
+        </button>
+      </div>
       <RouterLink
         v-for="item in navItems" :key="item.to"
         :to="item.to"
@@ -118,10 +129,10 @@ import { ref, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConfigStore } from '../stores/config'
 import { usePlayerStore } from '../stores/player'
-import { search } from '../api/subsonic'
+import { search, startScan } from '../api/subsonic'
 import RecentPlays from './RecentPlays.vue'
 import AskAiModal from './AskAiModal.vue'
-import { House, Mic2, Disc3, ListMusic } from 'lucide-vue-next'
+import { House, Mic2, Disc3, ListMusic, RefreshCw } from 'lucide-vue-next'
 
 const config = useConfigStore()
 const player = usePlayerStore()
@@ -137,6 +148,22 @@ const navItems = [
 
 function isActive(path) {
   return route.path.startsWith(path)
+}
+
+// Manual library rescan — gonic is never scanned automatically.
+// ponytail: gonic gives no completion signal, so the spinner only covers the
+// request itself, not the scan. Poll getScanStatus if that ever matters.
+const scanning = ref(false)
+async function rescan() {
+  if (scanning.value) return
+  scanning.value = true
+  try {
+    await startScan()
+  } catch (_) {
+    /* gonic unreachable — nothing useful to show here */
+  } finally {
+    scanning.value = false
+  }
 }
 
 function logout() {

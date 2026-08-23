@@ -455,7 +455,7 @@
 import { ref, reactive, computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
-import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap, startScan } from '../api/subsonic'
+import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, searchArtistImages } from '../api/covers'
 import { GENRES } from '../api/genres'
@@ -702,7 +702,6 @@ async function saveTagEdits() {
       year:        year        || undefined,
       genre:       genre       || undefined,
     })
-    await startScan().catch(() => {})
   } catch (e) {
     tagSaveError.value = 'Save failed — ' + (e?.message || 'server unreachable')
     tagSaving.value = false
@@ -756,7 +755,6 @@ async function saveTrackEdits() {
       artist: artist || undefined,
       track:  num    || undefined,
     })
-    await startScan().catch(() => {})
   } catch (e) {
     trackSaveError.value = 'Save failed — ' + (e?.message || 'server unreachable')
     trackSaving.value = false
