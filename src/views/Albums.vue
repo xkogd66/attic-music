@@ -795,8 +795,10 @@ async function chooseCover(c) {
   coverSearchOpen.value = false
   try {
     // Last.fm's CDN picks the format from Accept — the browser's default asks
-    // for WebP, which gonic (Go stdlib) cannot decode. Ask for JPEG/PNG.
-    const blob = await (await fetch(c.url, { headers: { Accept: 'image/jpeg,image/png' } })).blob()
+    // for WebP, which gonic (Go stdlib) cannot decode. Ask for JPEG/PNG —
+    // cache: reload because the modal's <img> preview already cached the
+    // WebP variant and the CDN sends no Vary: Accept.
+    const blob = await (await fetch(c.url, { cache: 'reload', headers: { Accept: 'image/jpeg,image/png' } })).blob()
     const form = new FormData()
     form.append('cover', blob, 'cover.jpg')
     const res = await fetch(
