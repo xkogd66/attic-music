@@ -794,7 +794,9 @@ async function chooseCover(c) {
   // Down goes the modal — the sidecar embeds into the mp3s in the background.
   coverSearchOpen.value = false
   try {
-    const blob = await (await fetch(c.url)).blob()
+    // Last.fm's CDN picks the format from Accept — the browser's default asks
+    // for WebP, which gonic (Go stdlib) cannot decode. Ask for JPEG/PNG.
+    const blob = await (await fetch(c.url, { headers: { Accept: 'image/jpeg,image/png' } })).blob()
     const form = new FormData()
     form.append('cover', blob, 'cover.jpg')
     const res = await fetch(
