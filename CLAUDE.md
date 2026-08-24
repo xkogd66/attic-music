@@ -38,6 +38,31 @@ in the root [README.md](README.md#chat-server).
 `chat-server-secret.yaml` holds live API keys and must never be committed.
 **This is a public repo.**
 
+## artist-images/
+
+`artist-images/` is a single-file Go sidecar (cover art + ID3 tag editing on the
+NFS share; see `docs/ARCHITECTURE.md`). It is built by the `build-artist-images`
+job in `.github/workflows/deploy.yaml` (context `artist-images`) into
+`ghcr.io/xkogd66/artist-images:latest`, deployed via `k8s/artist-images.yaml`.
+
+- **Dependencies are pinned** in committed `artist-images/go.mod` + `go.sum`;
+  the Dockerfile builds with `golang:1.22-bookworm` (Go 1.22.12,
+  `GOTOOLCHAIN=local`). It used to run `go mod init && go mod tidy` inside the
+  image, which floated to latest releases and broke on 2026-08-24 when
+  `golang.org/x/image` v0.45.0 declared `go 1.25.0` — see commit(s) fixing that.
+- **Keep `golang.org/x/image` ≤ v0.24.0 unless you also bump the builder's Go:**
+  v0.25.0+ requires go ≥ 1.23, v0.45.0 requires go ≥ 1.25. v0.24.0 (go 1.18) is
+  the newest release compatible with the Go 1.22 image. `id3v2/v2` v2.1.4 is fine
+  (go 1.13).
+- **Regenerating `go.mod`/`go.sum` after changing imports:** no local Go is
+  installed, so use the same container image:
+  `docker run --rm -v $PWD/artist-images:/app -w /app golang:1.22-bookworm sh -c "go mod tidy && go build -o /tmp/artist-images ."`
+  (`go mod tidy` keeps explicitly-pinned direct requires; it will not silently
+  bump `x/image` back to an incompatible latest).
+- **Moving to a newer Go:** bump the `FROM golang:...` line in the Dockerfile
+  **and** the `go` directive in `go.mod` together, then run the tidy command
+  above.
+
 ## how this app is served
 
 - push to `main` triggers `.github/workflows/deploy.yaml`: builds the Vite app into an

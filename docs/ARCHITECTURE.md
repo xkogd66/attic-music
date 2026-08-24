@@ -334,7 +334,9 @@ backend, not a product).
   `artist-images:8080` and `/chat-api/` → `chat-server:8090`.
 - **chat-server**: `node:22-bookworm-slim`, `npm ci --omit=dev`, runs
   `index.js`.
-- **artist-images**: Go multi-stage build (`go mod init` in-Dockerfile) →
+- **artist-images**: Go multi-stage build — deps pinned in committed
+  `go.mod`/`go.sum` (builder is `golang:1.22-bookworm`; keep
+  `golang.org/x/image` ≤ v0.24.0, the newest release compatible with Go 1.22) →
   minimal `debian:bookworm-slim`.
 
 ### Kubernetes (`k8s/`, namespace `webapps`)
