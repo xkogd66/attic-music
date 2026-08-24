@@ -16,7 +16,7 @@ const GONIC_PASSWORD = process.env.GONIC_PASSWORD;
 // /chat/completions endpoint (OpenAI, Groq, Together, OpenRouter, Ollama, vLLM).
 // The first entry is the default when a request names no provider.
 const DEFAULT_PROVIDERS = [
-  { id: "claude", label: "Claude Haiku", kind: "anthropic", model: "claude-haiku-4-5" },
+  { id: "claude", label: "Claude Sonnet", kind: "anthropic", model: "claude-sonnet-4-5" },
 ];
 
 let PROVIDERS;

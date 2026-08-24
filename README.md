@@ -332,21 +332,21 @@ carry their own key.
 
 ```json
 [
-  { "id": "claude", "label": "Claude Haiku", "kind": "anthropic", "model": "claude-haiku-4-5" },
+  { "id": "claude", "label": "Claude Sonnet", "kind": "anthropic", "model": "claude-sonnet-4-5" },
   { "id": "gpt",    "label": "GPT-4o mini",  "kind": "openai",    "model": "gpt-4o-mini" },
   { "id": "llama",  "label": "Llama 3 (local)", "kind": "openai", "model": "llama3",
     "baseUrl": "http://ollama:11434/v1", "apiKeyEnv": "OLLAMA_API_KEY" }
 ]
 ```
 
-Unset `LLM_PROVIDERS` falls back to a single Claude Haiku entry, so the
+Unset `LLM_PROVIDERS` falls back to a single Claude Sonnet entry, so the
 default deployment behaves as it always did. Startup fails fast on malformed
 JSON, a bad entry, or a missing key for any listed provider — a provider you
 can pick in the UI is one the server has already proved it can authenticate.
 
 | Env var | Default | Notes |
 |---|---|---|
-| `LLM_PROVIDERS` | one Claude Haiku entry | JSON array, first entry is the default |
+| `LLM_PROVIDERS` | one Claude Sonnet entry | JSON array, first entry is the default |
 | `ANTHROPIC_API_KEY` | — | Required if any entry is `kind: "anthropic"` |
 | `OPENAI_API_KEY` | — | Required for `openai` entries with no `apiKeyEnv` |
 | `GONIC_URL`, `GONIC_USERNAME`, `GONIC_PASSWORD` | — | Always required |

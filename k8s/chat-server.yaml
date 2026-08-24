@@ -34,7 +34,7 @@ spec:
             - name: LLM_PROVIDERS
               value: |
                 [
-                  { "id": "claude",   "label": "Claude Haiku", "kind": "anthropic", "model": "claude-haiku-4-5" },
+                  { "id": "claude",   "label": "Claude Sonnet", "kind": "anthropic", "model": "claude-sonnet-4-5" },
                   { "id": "ollama",   "label": "Ollama (local)", "kind": "openai", "model": "REPLACE_ME",
                     "baseUrl": "http://ollama.webapps.svc.cluster.local:11434/v1", "apiKeyEnv": "OLLAMA_API_KEY" },
                   { "id": "gemini",   "label": "Gemini", "kind": "openai", "model": "REPLACE_ME",

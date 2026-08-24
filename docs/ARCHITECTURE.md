@@ -368,14 +368,90 @@ On push to `main`, three jobs:
   Cloudflare tunnel** (cloudflared pod, config in the Zero Trust dashboard,
   *not* in-cluster) routes to the cluster. No public ingress/LoadBalancer.
 
-### Helper scripts (maintenance tooling)
-- `scripts/artist-setup.py` — run from an artist folder: fetches the artist
-  avatar (`thumbs -d`), then per-album fetches covers from MusicBrainz →
-  Deezer, saves `cover.jpg`, and embeds them into MP3 tags via mutagen.
-- `tools/set-album-artist.py` — batch sets the Album Artist (`TPE2`) across an
-  artist folder and renames the folder to the sidecar's naming convention
-  (`lowercase`, spaces/special → underscores), at artist- or letter-directory
-  level.
+### Helper scripts & the musiclib CLI (maintenance tooling)
+
+**`scripts/musiclib.py` — interactive music-library manager (v1.0, ~2,300
+lines).** A single menu-driven CLI that replaces ~30 one-off scripts. It is a
+pure filesystem tool: it edits tags/artwork directly on the NFS library and
+talks to online metadata APIs (MusicBrainz, Last.fm, Deezer, LRCLIB, Cover Art
+Archive) — it **never calls gonic**. Menu sections:
+
+- **A. Cover Art**
+  - *Normalize artwork* — per album, in order: existing `cover.jpg` in the
+    folder → extract the embedded APIC frame (and save it back as `cover.jpg`)
+    → fetch from Last.fm (`album.getinfo`, largest of mega/extralarge/large) —
+    and in every case embed the result into all the album's MP3s.
+  - *Fetch artist thumbs* — artist avatars from Deezer (`search/artist`,
+    `picture_xl`/`picture_big`) for artists missing a `cover.jpg`. Both
+    fetchers run bytes through `_ensure_real_jpeg()`, which re-encodes
+    non-JPEG payloads (notably **WebP**) as real JPEG — the same WebP
+    constraint the Go sidecar works around for gonic.
+- **B. Tags — Cleanup**
+  1. *Sanitize to golden set* — two passes: wipe every tag not in the
+     `GOLDEN_TAGS` allowlist (`TIT2 TALB TPE1 TPE2 TRCK TDRC TPOS TCOM TPE3
+     APIC TCMP`), then force `GROUPING_TAGS` (`TALB TPE2 TDRC TPOS TCMP`) to
+     match the first file of each album.
+  2. *Delete sort tags* — `TSOP/TSO2/TSOA/TSOT/TSOS/TSOC/TSOO/XSOP`,
+     `TXXX:*sort*`, and the vorbis/easy sort keys, on MP3 and non-MP3 alike.
+  3. *Lowercase all text frames* — every ID3 text frame lowercased (the
+     library stores artist/album/title in lowercase).
+  4. *Set TPE2* — prompt for an Album Artist value and write it to all MP3s.
+  5. *Nuclear clean + rename* — **destructive** (requires typing `NUCLEAR` to
+     confirm): wipe all tags, rewrite the core tags lowercased (`artist title
+     album albumartist tracknumber disc date`), hoist `feat. X` out of the
+     artist field into the title, rename files to `NN-NN-title.ext`.
+  6. *Rename album folders from tags* — majority year + album tag →
+     `YYYY-album_slug`.
+  7. *Slugify folder names* — `lowercase_underscore`, `(2) foo` → `2-foo`.
+  8. *Tag from filename* — parse `Artist - Title.mp3` / `NN - Title.mp3` into
+     `TIT2`/`TPE1`.
+- **C. Tags — Enrich**
+  - *Fill missing genre/year* — MusicBrainz release + release-group lookups
+    (genre: highest-count non-`GENERIC_GENRES` tag; year: earliest release
+    date), falling back to Last.fm top tags; a second pass fills the remaining
+    albums with the artist's majority genre.
+  - *Interactive MusicBrainz tagger* — search → pick a release → applies the
+    full tag set per track position (`TIT2 TRCK TPE1 TPE2 TALB TDRC` + front
+    cover from the Cover Art Archive), then offers to continue with sibling
+    albums of the same artist.
+  - *Fetch & embed lyrics* — LRCLIB → `USLT` frame + `.lrc` sidecar per track.
+- **D. Audit (read-only)** — golden-tag compliance report (junk tags +
+  cross-track conflicts on `TALB/TPE2/TDRC`) and side-by-side tag diffs of two
+  files/folders.
+- **E. Convert (needs ffmpeg)** — FLAC→MP3 320k, WAV→FLAC (lossless),
+  M4A/MP4→MP3 320k (the MP3 conversions delete the original by default).
+- **F. Utilities** — split a long MP3 by a cue/timestamp file (ffmpeg
+  `-c copy`, outputs `NN-title.mp3`, optional deletion of the original); purge
+  macOS junk (`.DS_Store`, `._*`, `__MACOSX`, …).
+- **G. Configuration** — Last.fm key, Fanart.tv key, MusicBrainz contact email,
+  default library path, persisted to `~/.musiclib.json` (env overrides
+  `FANART_API_KEY` / `LASTFM_API_KEY`).
+- **H. Workflows (onboarding pipeline)** — 1) interactive per-album tag
+  consistency (prompts only on missing/conflicting `TALB`/`TPE2`/`TDRC`, and
+  knows a varying `TPE1` with a consistent `TPE2` is a compilation) plus a
+  cross-album artist check; 2) batch golden-set sanitize; 3) artwork normalize;
+  4) full onboarding (1 → 2 → 3 → lowercase).
+
+Shared infrastructure worth noting: automatic library-hierarchy detection
+(`root/letter/artist/album` via depth probing) with level-aware iterators;
+tab-completed path prompts that remember the last path; a threaded progress
+bar; `dry_run_confirm()` (preview + `[y/N]`) before every destructive action;
+SIGINT handling; and per-operation timestamped logs under `~/musiclib_logs/`.
+It hard-codes a Fanart.tv API key as the default config and brands itself as a
+"Navidrome" manager even though this repo's server is gonic (the script is
+server-agnostic — it never touches the server). It overlaps with the Go
+sidecar (both write ID3 tags and embed artwork on the NFS share) and with
+`artist-setup.py` below.
+
+**`scripts/artist-setup.py`** — run from an artist folder: fetches the artist
+avatar (`thumbs -d`), then per-album fetches covers from MusicBrainz → Deezer,
+saves `cover.jpg`, and embeds them into MP3 tags via mutagen (a precursor to
+musiclib's artwork/tagging features).
+
+**`tools/set-album-artist.py`** — batch sets the Album Artist (`TPE2`) across
+an artist folder and renames the folder to the sidecar's naming convention
+(`lowercase`, spaces/special → underscores), at artist- or letter-directory
+level.
 
 ## 8. Key domain rules / data model
 
@@ -428,4 +504,13 @@ On push to `main`, three jobs:
    a private cluster, worth knowing).
 5. **README drift**: the structure section still lists `Folders.vue` and other
    pieces that no longer match exactly.
+6. **Hardcoded Fanart.tv API key** in `scripts/musiclib.py` (default in
+   `load_config()`) — a committed key in a public repo; same class of concern
+   as item 1.
+7. **Planned work**: musiclib's CLI capabilities (tag cleanup/enrich, artwork,
+   audit, convert) are intended to be folded into the web app itself, replacing
+   the separate filesystem/CLI workflow. Note the overlap it will have with the
+   Go sidecar, which already owns ID3 tag writes and cover embedding on the
+   NFS share, and with the frontend's per-album tag-editing UI
+   (`saveAlbumTags`/`saveTrackTags`).
 
