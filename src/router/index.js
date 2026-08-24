@@ -7,6 +7,7 @@ import Artists   from '../views/Artists.vue'
 import Albums    from '../views/Albums.vue'
 import Playlists from '../views/Playlists.vue'
 import Search    from '../views/Search.vue'
+import Tools     from '../views/Tools.vue'
 
 const routes = [
   { path: '/login',         component: Login,     name: 'login'           },
@@ -18,6 +19,7 @@ const routes = [
   { path: '/playlists',     component: Playlists, name: 'playlists'       },
   { path: '/playlists/:id', component: Playlists, name: 'playlist-detail' },
   { path: '/search',        component: Search,    name: 'search'          },
+  { path: '/tools',         component: Tools,     name: 'tools'           },
   { path: '/',              redirect: '/home'                              },
 ]
 

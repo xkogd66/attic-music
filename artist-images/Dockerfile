@@ -4,6 +4,7 @@ COPY main.go .
 RUN go mod init artist-images && go mod tidy && go build -o artist-images .
 
 FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/artist-images /artist-images
 EXPOSE 8080
 CMD ["/artist-images"]

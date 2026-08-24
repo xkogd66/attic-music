@@ -507,10 +507,18 @@ level.
 6. **Hardcoded Fanart.tv API key** in `scripts/musiclib.py` (default in
    `load_config()`) — a committed key in a public repo; same class of concern
    as item 1.
-7. **Planned work**: musiclib's CLI capabilities (tag cleanup/enrich, artwork,
-   audit, convert) are intended to be folded into the web app itself, replacing
-   the separate filesystem/CLI workflow. Note the overlap it will have with the
-   Go sidecar, which already owns ID3 tag writes and cover embedding on the
-   NFS share, and with the frontend's per-album tag-editing UI
-   (`saveAlbumTags`/`saveTrackTags`).
+7. **Planned work (done 2026-08-24)**: musiclib's CLI capabilities (tag
+   cleanup/enrich, artwork, audit, convert) have been folded into the web app —
+   the Go sidecar gained `/audit`, `/cleanup` (sort-tags | golden-set |
+   lowercase | from-filename), `/normalize-cover`, `/re-embed-cover`,
+   `/convert` (needs ffmpeg in the sidecar image), `/enrich` (genre/year via
+   MusicBrainz + Last.fm fallback) and `/enrich-lyrics` (LRCLIB). Every
+   operation is **asynchronous**: the POST starts a background job (per-album
+   dir lock, panic recovery, last-50 job history in memory) and returns
+   202 + `{"id"}`; `GET /job?id=` polls status/progress/result and
+   `GET /jobs` lists recent jobs. The frontend's `Tools.vue` (`/tools`,
+   `src/api/maintenance.js`) shows a running-jobs panel with per-item progress
+   bars and maps finished jobs onto the result view. `scripts/musiclib.py`
+   remains as the standalone CLI (it is server-agnostic and never touched the
+   server), but the web path now overlaps it — see the overlap notes above.
 

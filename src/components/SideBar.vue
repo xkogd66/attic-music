@@ -133,7 +133,7 @@ import { usePlayerStore } from '../stores/player'
 import { search, startScan, getScanStatus } from '../api/subsonic'
 import RecentPlays from './RecentPlays.vue'
 import AskAiModal from './AskAiModal.vue'
-import { House, Mic2, Disc3, ListMusic, RefreshCw } from 'lucide-vue-next'
+import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw } from 'lucide-vue-next'
 
 const config = useConfigStore()
 const player = usePlayerStore()
@@ -145,6 +145,7 @@ const navItems = [
   { to: '/artists',   icon: Mic2,      label: 'Artists'   },
   { to: '/albums',    icon: Disc3,     label: 'Albums'    },
   { to: '/playlists', icon: ListMusic, label: 'Playlists' },
+  { to: '/tools',     icon: Wrench,    label: 'Tools'     },
 ]
 
 function isActive(path) {

@@ -44,6 +44,8 @@ src/
     lastfm.js     # Last.fm scrobbling integration
     lyrics.js     # LRCLIB lyrics fetching + manual lyrics
     genres.js     # 40 curated standard genre names
+    tags.js       # album/track tag writes via the artist-images sidecar
+    maintenance.js # library maintenance ops (audit/cleanup/convert/enrich) via the sidecar
   stores/
     config.js     # user config (server URL, credentials, lastfm)
     player.js     # playback state, queue, shuffle/repeat
@@ -58,11 +60,12 @@ src/
     Albums.vue    # album grid with genre/year filters + carousels
     Playlists.vue # playlist list + detail
     Search.vue    # search view
+    Tools.vue     # library maintenance: audit / tag cleanup / artwork / convert / enrich
   components/
     Player.vue       # desktop footer player + queue
     MiniPlayer.vue   # mobile mini player
     FullPlayer.vue   # mobile full-screen player
-    BottomNav.vue    # mobile bottom nav (5 tabs)
+    BottomNav.vue    # mobile bottom nav (6 tabs)
     SideBar.vue      # desktop sidebar (nav + search + last.fm scrobbles)
     AskAiModal.vue   # desktop Ask AI overlay (opened from the sidebar ✨ button)
     FolderNode.vue   # expandable folder tree node
@@ -96,6 +99,7 @@ src/
 - `/albums`, `/albums/:id` → `Albums.vue`
 - `/playlists`, `/playlists/:id` → `Playlists.vue`
 - `/search` → `Search.vue`
+- `/tools` → `Tools.vue` (library maintenance: audit / cleanup / artwork / convert / enrich)
 
 ### Subsonic API
 - All music data comes from `src/api/subsonic.js`, which wraps the Subsonic REST API
