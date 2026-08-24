@@ -223,22 +223,46 @@
       </div>
       <div class="flex-1 overflow-y-auto px-6 py-4 pb-40 md:pb-24">
         <div v-if="loadingArtist" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
-        <div v-else class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(88px, 1fr))">
-          <div
-            v-for="album in currentArtistAlbums" :key="album.id"
-            class="cursor-pointer group"
-            @click="openAlbum(album)"
-          >
-            <div class="aspect-square bg-amber-50 mb-1 overflow-hidden relative rounded">
-              <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-              <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
-              <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                <button class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs pl-0.5" @click.stop="playAlbum(album)">▶</button>
+        <div v-else>
+          <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(88px, 1fr))">
+            <div
+              v-for="album in mainAlbums" :key="album.id"
+              class="cursor-pointer group"
+              @click="openAlbum(album)"
+            >
+              <div class="aspect-square bg-amber-50 mb-1 overflow-hidden relative rounded">
+                <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
+                <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                  <button class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs pl-0.5" @click.stop="playAlbum(album)">▶</button>
+                </div>
+              </div>
+              <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
+              <div class="text-xs text-stone-600 mt-0.5 truncate">
+                {{ [album.year, album.songCount ? album.songCount + ' tracks' : '', album.genre].filter(Boolean).join(' · ') }}
               </div>
             </div>
-            <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-            <div class="text-xs text-stone-600 mt-0.5 truncate">
-              {{ [album.year, album.songCount ? album.songCount + ' tracks' : '', album.genre].filter(Boolean).join(' · ') }}
+          </div>
+
+          <!-- Albums this artist only appears on (compilations, tributes, ...) -->
+          <div v-if="appearsOnAlbums.length" class="mt-8">
+            <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">also appears on...</div>
+            <div class="w-full flex gap-3 overflow-x-auto pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+              <div
+                v-for="album in appearsOnAlbums" :key="album.id"
+                class="flex-none cursor-pointer w-36 group"
+                @click="openAlbum(album)"
+              >
+                <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
+                  <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
+                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" loading="lazy" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                    <button class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs pl-0.5" @click.stop="playAlbum(album)">▶</button>
+                  </div>
+                </div>
+                <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
+                <div class="text-xs text-stone-600 mt-0.5 truncate">{{ album.albumArtist || album.artist }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -485,6 +509,26 @@ const currentArtistAlbums     = ref([])
 const loadingArtist           = ref(false)
 const artistDetailImageUrl    = ref(null)
 const currentArtistLetter     = ref(null)
+
+// Discography split — gonic's getArtist returns every album containing the
+// artist's songs, including compilations/tributes the artist only appears on.
+// Main albums: the album artist IS this artist, listed chronologically.
+// "Also appears on": every other album (various artists, other artists, ...).
+const mainAlbums = computed(() => {
+  const artistId = currentArtist.value?.id
+  const name     = (currentArtist.value?.name || '').toLowerCase()
+  return currentArtistAlbums.value
+    .filter(a => a.artistId ? a.artistId === artistId : (a.artist || '').toLowerCase() === name)
+    .sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity) || a.name.localeCompare(b.name))
+})
+
+const appearsOnAlbums = computed(() => {
+  const artistId = currentArtist.value?.id
+  const name     = (currentArtist.value?.name || '').toLowerCase()
+  return currentArtistAlbums.value
+    .filter(a => a.artistId ? a.artistId !== artistId : (a.artist || '').toLowerCase() !== name)
+    .sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity) || a.name.localeCompare(b.name))
+})
 
 function getArtistLetter(name) {
   const stripped = name?.replace(/^(the|a|an)\s+/i, '') ?? name

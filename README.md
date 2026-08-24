@@ -2,6 +2,8 @@
 
 A responsive Vue 3 music player webapp that connects to a Subsonic-compatible server (Gonic) for music library browsing and playback, with optional Last.fm scrobbling.
 
+> 📖 Codebase architecture: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Tech Stack
 
 - **Vue 3** — Composition API with `<script setup>` SFCs throughout
