@@ -203,7 +203,7 @@
         <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <div v-else>
           <div class="flex gap-4 mb-6 items-end">
-            <div class="w-28 h-28 flex-shrink-0 bg-amber-50 overflow-hidden rounded-lg shadow-md relative">
+            <div class="w-28 h-28 flex-shrink-0 bg-amber-50 overflow-hidden rounded-lg shadow-md relative group/cover">
               <div class="w-full h-full flex items-center justify-center text-4xl">💿</div>
               <img v-if="albumDetailCoverSrc && albumDetailCoverState !== 'failed'"
                 :src="albumDetailCoverSrc"
@@ -211,12 +211,14 @@
                 class="absolute inset-0 w-full h-full object-cover"
                 @error="onAlbumDetailCoverError"
               />
-              <button v-if="albumDetailCoverState === 'failed'"
+              <button
                 class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer gap-1"
-                title="Search web for cover art"
+                :class="albumDetailCoverState === 'failed' ? '' : 'bg-black/40 opacity-0 group-hover/cover:opacity-100 transition-opacity'"
+                title="Change album cover"
                 @click="openCoverSearch"
               >
-                <span class="text-xs text-stone-600 font-medium">Add cover</span>
+                <span v-if="albumDetailCoverState === 'failed'" class="text-xs text-stone-600 font-medium">Add cover</span>
+                <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </button>
             </div>
             <div class="flex-1 overflow-hidden">
