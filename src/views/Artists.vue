@@ -250,7 +250,7 @@
             <div class="w-full flex gap-3 overflow-x-auto pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
               <div
                 v-for="album in appearsOnAlbums" :key="album.id"
-                class="flex-none cursor-pointer w-36 group"
+                class="flex-none cursor-pointer w-[88px] group"
                 @click="openAlbum(album)"
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
@@ -1008,11 +1008,7 @@ async function chooseAvatar(c) {
   coverSaving.value = true
   const name = currentArtist.value.name
   try {
-    // Last.fm's CDN picks the format from Accept — the browser's default asks
-    // for WebP, which gonic (Go stdlib) cannot decode. Ask for JPEG/PNG —
-    // cache: reload because the modal's <img> preview already cached the
-    // WebP variant and the CDN sends no Vary: Accept.
-    const blob = await (await fetch(c.url, { cache: 'reload', headers: { Accept: 'image/jpeg,image/png' } })).blob()
+    const blob = await (await fetch(c.url, { cache: 'reload' })).blob()
     const form = new FormData()
     form.append('cover', blob, 'avatar.jpg')
     const res = await fetch(

@@ -56,34 +56,65 @@ export async function searchAlbumCovers(artist, album) {
   return lastfmCovers(artist, album)
 }
 
-// Last.fm artist images (artist.getInfo + artist.search), largest per hit.
-async function lastfmArtistImages(name) {
-  const config = useConfigStore()
-  if (!config.lastfmKey) return []
+const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php'
 
+async function wikipediaGet(params) {
+  const url = `${WIKIPEDIA_API}?${new URLSearchParams({ ...params, format: 'json', origin: '*' })}`
+  const res = await fetch(url)
+  return res.json()
+}
+
+function firstPage(json) {
+  return Object.values(json?.query?.pages || {})[0]
+}
+
+// File names that are (almost) never a usable portrait: logos, signatures,
+// flags, category icons — Wikipedia articles embed plenty of these.
+const NOISE_FILENAME = /logo|icon|signature|flag|symbol|\.svg$/i
+
+// Resolve the artist name to a Wikipedia article title: the exact title if it
+// exists and isn't a disambiguation page, otherwise the top full-text search hit.
+async function wikipediaPageTitle(name) {
+  const direct = await wikipediaGet({ action: 'query', titles: name, prop: 'pageprops' })
+  const page = firstPage(direct)
+  if (page && !page.missing && !page.pageprops?.disambiguation) return page.title
+
+  const search = await wikipediaGet({ action: 'query', list: 'search', srsearch: name, srnamespace: 0, srlimit: 1 })
+  return search?.query?.search?.[0]?.title || null
+}
+
+// Wikipedia article images for an artist: the infobox lead photo plus every
+// other embedded photo, largest size available. No aspect-ratio filtering —
+// the avatar UI already center-crops to a circle regardless of source shape.
+async function wikipediaArtistImages(name) {
   const out = []
   const seen = new Set()
-  const push = url => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Last.fm' }) } }
-  const base = `https://ws.audioscrobbler.com/2.0/?api_key=${encodeURIComponent(config.lastfmKey)}&format=json`
+  const push = url => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Wikipedia' }) } }
 
-  try {
-    const res  = await fetch(`${base}&method=artist.getinfo&artist=${encodeURIComponent(name)}`)
-    const json = await res.json()
-    push(bestLastfmImage(json?.artist?.image))
-  } catch (_) {}
+  const title = await wikipediaPageTitle(name)
+  if (!title) return out
 
-  try {
-    const res  = await fetch(`${base}&method=artist.search&artist=${encodeURIComponent(name)}&limit=10`)
-    const json = await res.json()
-    for (const m of ensureArray(json?.results?.artistmatches?.artist)) push(bestLastfmImage(m.image))
-  } catch (_) {}
+  const lead = await wikipediaGet({ action: 'query', titles: title, prop: 'pageimages', piprop: 'thumbnail', pithumbsize: 800 })
+  push(firstPage(lead)?.thumbnail?.source)
+
+  const imagesRes = await wikipediaGet({ action: 'query', titles: title, prop: 'images', imlimit: 30 })
+  const files = (firstPage(imagesRes)?.images || [])
+    .map(i => i.title)
+    .filter(t => !NOISE_FILENAME.test(t))
+    .slice(0, 15)
+
+  if (files.length) {
+    const info = await wikipediaGet({ action: 'query', titles: files.join('|'), prop: 'imageinfo', iiprop: 'url|size' })
+    for (const p of Object.values(info?.query?.pages || {})) {
+      const ii = p.imageinfo?.[0]
+      if (ii?.width >= 200) push(ii.url)
+    }
+  }
 
   return out
 }
 
-// Aggregate image candidates for an artist — same shape/behaviour as
-// searchAlbumCovers. Last.fm only, and it mostly returns placeholders (which
-// are filtered out), so this can legitimately come back empty.
+// Aggregate image candidates for an artist — same shape as searchAlbumCovers.
 export async function searchArtistImages(name) {
-  return lastfmArtistImages(name)
+  return wikipediaArtistImages(name)
 }
