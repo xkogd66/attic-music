@@ -39,23 +39,37 @@
         </div>
       </section>
 
-      <!-- ALBUM PICKER -->
+      <!-- PICKER (album, or every album by one artist) -->
       <section class="bg-white rounded-xl border border-stone-200 p-4">
-        <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Album</h2>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600">{{ pickerMode === 'artist' ? 'Artist' : 'Album' }}</h2>
+          <div v-if="!selected && !selectedArtist" class="flex text-xs border border-stone-200 rounded-full overflow-hidden flex-shrink-0">
+            <button
+              class="px-2.5 py-1 transition-colors"
+              :class="pickerMode === 'album' ? 'bg-amber-700 text-white' : 'text-stone-600 hover:bg-amber-50'"
+              @click="setPickerMode('album')"
+            >Album</button>
+            <button
+              class="px-2.5 py-1 transition-colors"
+              :class="pickerMode === 'artist' ? 'bg-amber-700 text-white' : 'text-stone-600 hover:bg-amber-50'"
+              @click="setPickerMode('artist')"
+            >Artist</button>
+          </div>
+        </div>
         <p class="text-xs text-stone-500 mb-3">
-          Most operations run on a single album — pick one, or use the audit section to scan the whole library.
+          Run an operation on a single album, or every album by one artist — pick either, or use the audit section to scan the whole library.
         </p>
 
-        <div v-if="!selected" class="relative">
+        <div v-if="!selected && !selectedArtist" class="relative">
           <input
-            v-model="albumQuery"
+            v-model="query"
             type="search"
-            placeholder="Search albums…"
+            :placeholder="pickerMode === 'artist' ? 'Search artists…' : 'Search albums…'"
             class="w-full text-sm bg-stone-100 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-amber-700"
-            @input="onAlbumInput"
+            @input="onQueryInput"
           />
           <div
-            v-if="results && results.albums.length"
+            v-if="pickerMode === 'album' && results && results.albums.length"
             class="absolute left-0 right-0 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
           >
             <button
@@ -69,12 +83,25 @@
             </button>
           </div>
           <div
-            v-else-if="albumQuery && results && !results.albums.length"
+            v-else-if="pickerMode === 'artist' && results && results.artists.length"
+            class="absolute left-0 right-0 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
+          >
+            <button
+              v-for="a in results.artists"
+              :key="a.id"
+              class="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 transition-colors"
+              @click="pickArtist(a)"
+            >
+              <div class="truncate">{{ a.name }}</div>
+            </button>
+          </div>
+          <div
+            v-else-if="query && results && !(pickerMode === 'artist' ? results.artists.length : results.albums.length)"
             class="absolute left-0 right-0 z-50 mt-1 bg-white border border-stone-200 rounded-lg shadow px-3 py-2 text-xs text-stone-600"
-          >No matching albums</div>
+          >No matching {{ pickerMode === 'artist' ? 'artists' : 'albums' }}</div>
         </div>
 
-        <div v-else class="flex items-center gap-3">
+        <div v-else-if="selected" class="flex items-center gap-3">
           <img
             v-if="selected.coverArt"
             :src="coverUrl(selected.coverArt, 60)"
@@ -87,13 +114,25 @@
           </div>
           <button class="text-xs text-stone-500 hover:text-amber-700" @click="clearAlbum">✕ Clear</button>
         </div>
+
+        <div v-else class="flex items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium truncate">{{ selectedArtist.name }}</div>
+            <div class="text-xs text-stone-600 truncate">
+              {{ selectedArtist.albums.length }} album{{ selectedArtist.albums.length !== 1 ? 's' : '' }}
+            </div>
+          </div>
+          <button class="text-xs text-stone-500 hover:text-amber-700" @click="clearArtist">✕ Clear</button>
+        </div>
       </section>
 
       <!-- AUDIT -->
       <section class="bg-white rounded-xl border border-stone-200 p-4">
         <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Audit (read-only)</h2>
         <div class="flex gap-2 flex-wrap">
-          <button class="btn" :disabled="!selected || busy" @click="doAuditAlbum">Audit this album</button>
+          <button class="btn" :disabled="(!selected && !selectedArtist) || busy" @click="doAuditAlbum">
+            {{ selectedArtist ? 'Audit this artist' : 'Audit this album' }}
+          </button>
           <button class="btn" :disabled="busy" @click="doAuditLibrary">Audit whole library</button>
         </div>
         <p class="text-xs text-stone-500 mt-2">
@@ -102,7 +141,7 @@
       </section>
 
       <!-- CLEANUP -->
-      <section v-if="selected" class="bg-white rounded-xl border border-stone-200 p-4">
+      <section v-if="selected || selectedArtist" class="bg-white rounded-xl border border-stone-200 p-4">
         <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Tag cleanup</h2>
         <div class="divide-y divide-stone-100">
           <div v-for="c in CLEANUPS" :key="c.op" class="py-2.5 flex items-start gap-3">
@@ -117,7 +156,7 @@
       </section>
 
       <!-- ARTWORK -->
-      <section v-if="selected" class="bg-white rounded-xl border border-stone-200 p-4">
+      <section v-if="selected || selectedArtist" class="bg-white rounded-xl border border-stone-200 p-4">
         <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Artwork</h2>
         <div class="flex gap-2 flex-wrap">
           <button class="btn" :disabled="busy" @click="doNormalize">Normalize cover.jpg</button>
@@ -129,7 +168,7 @@
       </section>
 
       <!-- CONVERT -->
-      <section v-if="selected" class="bg-white rounded-xl border border-stone-200 p-4">
+      <section v-if="selected || selectedArtist" class="bg-white rounded-xl border border-stone-200 p-4">
         <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Convert</h2>
         <div class="flex items-center gap-2 flex-wrap">
           <select v-model="convTo" class="text-sm border border-stone-200 rounded px-2 py-1.5">
@@ -155,13 +194,17 @@
       </section>
 
       <!-- ENRICH -->
-      <section v-if="selected" class="bg-white rounded-xl border border-stone-200 p-4">
+      <section v-if="selected || selectedArtist" class="bg-white rounded-xl border border-stone-200 p-4">
         <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Enrich</h2>
         <div class="space-y-2">
           <div class="flex items-start gap-3">
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium">Genre + year</div>
               <div class="text-xs text-stone-500">MusicBrainz, Last.fm fallback — only fills missing values</div>
+              <label class="text-xs text-stone-600 flex items-center gap-1.5 cursor-pointer mt-1">
+                <input v-model="overwriteYear" type="checkbox" class="accent-amber-700" />
+                overwrite existing year with MusicBrainz' oldest release date
+              </label>
             </div>
             <button class="btn btn-ghost" :disabled="busy" @click="enrichPreview">Preview</button>
             <button class="btn" :disabled="busy" @click="enrichApply">Apply</button>
@@ -267,7 +310,7 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
 import { useConfigStore } from '../stores/config'
-import { search, coverUrl, startScan, getScanStatus } from '../api/subsonic'
+import { search, getArtist, coverUrl, startScan, getScanStatus } from '../api/subsonic'
 import {
   getJob,
   startAudit, startCleanup, startNormalizeCover, startReEmbedCover,
@@ -276,15 +319,23 @@ import {
 
 const config = useConfigStore()
 
-// ── album picker ──────────────────────────────────────────────
-const albumQuery = ref('')
-const results    = ref(null)
-const selected   = ref(null)   // a subsonic album: { id, name, artist, albumArtist, coverArt }
-let debounce     = null
+// ── picker: a single album, or every album by one artist ───────
+const pickerMode     = ref('album')  // 'album' | 'artist'
+const query          = ref('')
+const results        = ref(null)
+const selected       = ref(null)   // a subsonic album: { id, name, artist, albumArtist, coverArt }
+const selectedArtist = ref(null)   // { id, name, albums: [subsonic album, …] }
+let debounce          = null
 
-function onAlbumInput() {
+function setPickerMode(m) {
+  pickerMode.value = m
+  query.value = ''
+  results.value = null
+}
+
+function onQueryInput() {
   clearTimeout(debounce)
-  const q = albumQuery.value.trim()
+  const q = query.value.trim()
   if (!q) { results.value = null; return }
   debounce = setTimeout(async () => {
     try { results.value = await search(q) } catch { results.value = null }
@@ -293,9 +344,23 @@ function onAlbumInput() {
 
 function pickAlbum(a) {
   selected.value = a
-  albumQuery.value = ''
+  selectedArtist.value = null
+  query.value = ''
   results.value = null
   result.value = null
+}
+
+async function pickArtist(a) {
+  selected.value = null
+  query.value = ''
+  results.value = null
+  result.value = null
+  try {
+    const { albums } = await getArtist(a.id)
+    selectedArtist.value = { id: a.id, name: a.name, albums }
+  } catch (e) {
+    result.value = { ok: false, error: e.message || String(e) }
+  }
 }
 
 function clearAlbum() {
@@ -303,12 +368,25 @@ function clearAlbum() {
   result.value = null
 }
 
-// The on-disk identity the sidecar resolves the folder by — same convention as
-// the tag-save UI: albumArtist || artist, plus the album name.
-function disk() {
-  const a = selected.value
-  if (!a) return null
-  return { artist: a.albumArtist || a.artist || '', album: a.name || '' }
+function clearArtist() {
+  selectedArtist.value = null
+  result.value = null
+}
+
+// The on-disk identity the sidecar resolves the folder by, for every album the
+// current selection covers — same convention as the tag-save UI: albumArtist ||
+// artist, plus the album name. Artist mode uses the picked artist's own name for
+// every album, since that's the name Subsonic grouped them under (the physical
+// artist folder), not each album's own artist/albumArtist tag.
+function targets() {
+  if (selectedArtist.value) {
+    return selectedArtist.value.albums.map(al => ({ artist: selectedArtist.value.name, album: al.name || '' }))
+  }
+  if (selected.value) {
+    const a = selected.value
+    return [{ artist: a.albumArtist || a.artist || '', album: a.name || '' }]
+  }
+  return []
 }
 
 // ── shared job plumbing ────────────────────────────────────────
@@ -368,8 +446,9 @@ function jobToResult(job) {
 
 // ── audit ────────────────────────────────────────────────────
 function doAuditAlbum() {
-  const a = disk(); if (!a) return
-  launchJob(() => startAudit({ artist: a.artist, album: a.album }), `Audit ${a.album}`)
+  for (const t of targets()) {
+    launchJob(() => startAudit({ artist: t.artist, album: t.album }), `Audit ${t.album}`)
+  }
 }
 function doAuditLibrary() {
   launchJob(() => startAudit({ scope: 'all' }), 'Audit whole library')
@@ -384,24 +463,32 @@ const CLEANUPS = [
 ]
 
 function cleanupPreview(op) {
-  const a = disk(); if (!a) return
-  launchJob(() => startCleanup(a.artist, a.album, op), `Preview ${op}`)
+  for (const t of targets()) {
+    launchJob(() => startCleanup(t.artist, t.album, op), `Preview ${op} — ${t.album}`)
+  }
 }
 function cleanupApply(op) {
-  if (!window.confirm(`Apply “${op}”? This rewrites ID3 tags on the NFS share.`)) return
-  const a = disk(); if (!a) return
-  launchJob(() => startCleanup(a.artist, a.album, op, { apply: true }), `Apply ${op}`)
+  const ts = targets(); if (!ts.length) return
+  const scope = selectedArtist.value ? ` across ${ts.length} albums by ${selectedArtist.value.name}` : ''
+  if (!window.confirm(`Apply “${op}”${scope}? This rewrites ID3 tags on the NFS share.`)) return
+  for (const t of ts) {
+    launchJob(() => startCleanup(t.artist, t.album, op, { apply: true }), `Apply ${op} — ${t.album}`)
+  }
 }
 
 // ── artwork ──────────────────────────────────────────────────
 function doNormalize() {
-  const a = disk(); if (!a) return
-  launchJob(() => startNormalizeCover(a.artist, a.album), 'Normalize cover')
+  for (const t of targets()) {
+    launchJob(() => startNormalizeCover(t.artist, t.album), `Normalize cover — ${t.album}`)
+  }
 }
 function doReEmbed() {
-  if (!window.confirm('Re-embed the folder cover into every track? This rewrites all mp3 files in the album.')) return
-  const a = disk(); if (!a) return
-  launchJob(() => startReEmbedCover(a.artist, a.album), 'Re-embed cover')
+  const ts = targets(); if (!ts.length) return
+  const scope = selectedArtist.value ? ` across ${ts.length} albums by ${selectedArtist.value.name}` : ' in the album'
+  if (!window.confirm(`Re-embed the folder cover into every track${scope}? This rewrites all mp3 files.`)) return
+  for (const t of ts) {
+    launchJob(() => startReEmbedCover(t.artist, t.album), `Re-embed cover — ${t.album}`)
+  }
 }
 
 // ── convert ──────────────────────────────────────────────────
@@ -410,34 +497,49 @@ const convBitrate = ref('320k')
 const convDelete  = ref(true)
 
 function convertPreview() {
-  const a = disk(); if (!a) return
-  launchJob(() => startConvert(a.artist, a.album, { to: convTo.value, bitrate: convBitrate.value, deleteOriginal: convDelete.value }), 'Preview conversion')
+  for (const t of targets()) {
+    launchJob(() => startConvert(t.artist, t.album, { to: convTo.value, bitrate: convBitrate.value, deleteOriginal: convDelete.value }), `Preview conversion — ${t.album}`)
+  }
 }
 function convertApply() {
+  const ts = targets(); if (!ts.length) return
   const del = convDelete.value ? ' Original files will be DELETED after a successful conversion.' : ''
-  if (!window.confirm(`Convert this album to ${convTo.value.toUpperCase()}?${del}`)) return
-  const a = disk(); if (!a) return
-  launchJob(() => startConvert(a.artist, a.album, { to: convTo.value, bitrate: convBitrate.value, deleteOriginal: convDelete.value, apply: true }), `Convert to ${convTo.value.toUpperCase()}`)
+  const scope = selectedArtist.value ? `${ts.length} albums by ${selectedArtist.value.name}` : 'this album'
+  if (!window.confirm(`Convert ${scope} to ${convTo.value.toUpperCase()}?${del}`)) return
+  for (const t of ts) {
+    launchJob(() => startConvert(t.artist, t.album, { to: convTo.value, bitrate: convBitrate.value, deleteOriginal: convDelete.value, apply: true }), `Convert to ${convTo.value.toUpperCase()} — ${t.album}`)
+  }
 }
 
 // ── enrich ───────────────────────────────────────────────────
+const overwriteYear = ref(false)
+
 function enrichPreview() {
-  const a = disk(); if (!a) return
-  launchJob(() => startEnrich(a.artist, a.album, { fields: 'genre,year', lastfmKey: config.lastfmKey }), 'Preview enrich')
+  for (const t of targets()) {
+    launchJob(() => startEnrich(t.artist, t.album, { fields: 'genre,year', lastfmKey: config.lastfmKey, overwriteYear: overwriteYear.value }), `Preview enrich — ${t.album}`)
+  }
 }
 function enrichApply() {
-  if (!window.confirm('Fill missing genre + year (MusicBrainz, Last.fm fallback)?')) return
-  const a = disk(); if (!a) return
-  launchJob(() => startEnrich(a.artist, a.album, { fields: 'genre,year', lastfmKey: config.lastfmKey, apply: true }), 'Enrich genre + year')
+  const ts = targets(); if (!ts.length) return
+  const verb = overwriteYear.value ? 'Fill missing genre + overwrite year' : 'Fill missing genre + year'
+  const scope = selectedArtist.value ? ` across ${ts.length} albums by ${selectedArtist.value.name}` : ''
+  if (!window.confirm(`${verb}${scope} (MusicBrainz, Last.fm fallback)?`)) return
+  for (const t of ts) {
+    launchJob(() => startEnrich(t.artist, t.album, { fields: 'genre,year', lastfmKey: config.lastfmKey, overwriteYear: overwriteYear.value, apply: true }), `Enrich genre + year — ${t.album}`)
+  }
 }
 function lyricsPreview() {
-  const a = disk(); if (!a) return
-  launchJob(() => startEnrichLyrics(a.artist, a.album), 'Preview lyrics')
+  for (const t of targets()) {
+    launchJob(() => startEnrichLyrics(t.artist, t.album), `Preview lyrics — ${t.album}`)
+  }
 }
 function lyricsApply() {
-  if (!window.confirm('Embed lyrics from LRCLIB into every track (USLT + .lrc sidecar)?')) return
-  const a = disk(); if (!a) return
-  launchJob(() => startEnrichLyrics(a.artist, a.album, { apply: true }), 'Embed lyrics')
+  const ts = targets(); if (!ts.length) return
+  const scope = selectedArtist.value ? ` across ${ts.length} albums by ${selectedArtist.value.name}` : ''
+  if (!window.confirm(`Embed lyrics from LRCLIB into every track${scope} (USLT + .lrc sidecar)?`)) return
+  for (const t of ts) {
+    launchJob(() => startEnrichLyrics(t.artist, t.album, { apply: true }), `Embed lyrics — ${t.album}`)
+  }
 }
 
 // ── library rescan (same poll pattern as the sidebar) ────────

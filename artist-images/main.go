@@ -971,19 +971,23 @@ func lastfmGenre(key, artist, album string) string {
 	return ""
 }
 
-func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, apply bool, j *job) ([]change, error) {
+func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, overwriteYear, apply bool, j *job) ([]change, error) {
 	mp3s := mp3Names(dir)
 	if len(mp3s) == 0 {
 		return nil, nil
 	}
 	needGenre, needYear := doGenre, doYear
+	existingYear := ""
 	for _, name := range mp3s {
 		frames, _ := readTags(filepath.Join(dir, name))
 		if doGenre && strings.TrimSpace(frames["TCON"]) != "" {
 			needGenre = false
 		}
-		if doYear && strings.TrimSpace(frames["TDRC"]) != "" {
-			needYear = false
+		if y := strings.TrimSpace(frames["TDRC"]); doYear && y != "" {
+			existingYear = y
+			if !overwriteYear {
+				needYear = false
+			}
 		}
 	}
 	if !needGenre && !needYear {
@@ -1002,6 +1006,9 @@ func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, apply bool, j *job)
 	}
 	if needYear {
 		year = mbYear(rel)
+		if year != "" && year == existingYear {
+			year = "" // already correct — nothing to overwrite
+		}
 	}
 	if genre == "" && year == "" {
 		return []change{{File: "album", Detail: "no genre/year found (search: " + artist + " / " + album + ")"}}, nil
@@ -1014,7 +1021,11 @@ func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, apply bool, j *job)
 		if detail != "" {
 			detail += ", "
 		}
-		detail += "year = " + year
+		if existingYear != "" && existingYear != year {
+			detail += "year " + existingYear + " → " + year
+		} else {
+			detail += "year = " + year
+		}
 	}
 	changes := []change{{File: "album", Detail: detail}}
 	if apply {
@@ -1549,7 +1560,9 @@ func main() {
 	})
 
 	// ── musiclib fold: enrich ────────────────────────────────────────────
-	// POST /enrich?artist=&album=&fields=genre,year&lastfmKey=...&apply=1
+	// POST /enrich?artist=&album=&fields=genre,year&lastfmKey=...&overwriteYear=1&apply=1
+	// overwriteYear=1 re-fetches the oldest MusicBrainz release year and replaces
+	// TDRC even when the album already has one (normal runs only fill blanks).
 	http.HandleFunc("/enrich", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -1560,11 +1573,12 @@ func main() {
 			http.Error(w, "album directory not found", http.StatusNotFound)
 			return
 		}
-		fields := r.FormValue("fields")
-		apply  := r.FormValue("apply") == "1"
+		fields        := r.FormValue("fields")
+		apply         := r.FormValue("apply") == "1"
+		overwriteYear := r.FormValue("overwriteYear") == "1"
 		id := startJob("enrich", apply, dir, func(j *job) {
 			changes, err := enrichGenreYear(dir, r.FormValue("lastfmKey"),
-				strings.Contains(fields, "genre"), strings.Contains(fields, "year"), apply, j)
+				strings.Contains(fields, "genre"), strings.Contains(fields, "year"), overwriteYear, apply, j)
 			if err != nil {
 				j.fail(err)
 				return
