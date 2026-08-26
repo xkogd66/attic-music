@@ -780,21 +780,38 @@ const mbAPI = "https://musicbrainz.org/ws/2"
 
 var httpClient = &http.Client{Timeout: 15 * time.Second}
 
+// getJSON retries once on a network error or 5xx — MusicBrainz's public API in
+// particular returns "the server is currently busy" under load fairly often,
+// and without this a single blip gets reported to the user as "not found."
 func getJSON(url string, out interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("User-Agent", "attic-music/1.0 (ekskog@gmail.com)")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
+
+	var lastErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Second)
+		}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if resp.StatusCode >= 500 {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
+			continue
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
+		}
+		return json.NewDecoder(resp.Body).Decode(out)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
-	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	return lastErr
 }
 
 func humanAlbumName(dir string) (artist, album string) {
@@ -862,16 +879,15 @@ func pickGenre(items []map[string]interface{}) string {
 	return titleCase(top)
 }
 
-func mbSearchReleases(artist, album string) []map[string]interface{} {
+func mbSearchReleases(artist, album string) ([]map[string]interface{}, error) {
 	q := `artist:"` + artist + `" AND release:"` + album + `"`
 	var body struct {
 		Releases []map[string]interface{} `json:"releases"`
 	}
 	if err := getJSON(mbAPI+"/release?query="+url.QueryEscape(q)+"&fmt=json&limit=25", &body); err != nil {
-		log.Printf("mbSearchReleases: %v", err)
-		return nil
+		return nil, err
 	}
-	return body.Releases
+	return body.Releases, nil
 }
 
 func mbGenre(releases []map[string]interface{}) string {
@@ -995,7 +1011,10 @@ func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, overwriteYear, appl
 	}
 	artist, album := humanAlbumName(dir)
 	j.setMessage("searching MusicBrainz for " + artist + " / " + album)
-	rel := mbSearchReleases(artist, album)
+	rel, err := mbSearchReleases(artist, album)
+	if err != nil {
+		return []change{{File: "album", Detail: "MusicBrainz search failed (" + err.Error() + ") — try again"}}, nil
+	}
 	var genre, year string
 	if needGenre {
 		genre = mbGenre(rel)
