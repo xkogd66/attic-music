@@ -1004,13 +1004,18 @@ func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, overwriteYear, appl
 			genre = lastfmGenre(lastfmKey, artist, album)
 		}
 	}
+	yearConfirmed := false
 	if needYear {
 		year = mbYear(rel)
 		if year != "" && year == existingYear {
-			year = "" // already correct — nothing to overwrite
+			year = ""            // already correct — nothing to overwrite
+			yearConfirmed = true // …but MusicBrainz *was* found, so this isn't a miss
 		}
 	}
 	if genre == "" && year == "" {
+		if yearConfirmed {
+			return []change{{File: "album", Detail: "year already correct (" + existingYear + ")"}}, nil
+		}
 		return []change{{File: "album", Detail: "no genre/year found (search: " + artist + " / " + album + ")"}}, nil
 	}
 	detail := ""
