@@ -1,8 +1,15 @@
 do not assume anything. don't brute force running commands. ask questions.
 
-never run the build (npm run build, npm run dev, npm run preview, etc.) to test or verify changes. the user will test it themselves.
+never compile or build anything to test or verify changes — not npm run build/dev/preview, not `go build`/`go vet`, not `docker build`, not any other compiler/linter invocation, including via a container (e.g. the artist-images `docker run golang:... go build` command documented below is for the user to run, not Claude). This applies to every language and every part of this repo. The user will build and test it themselves.
 
-never run kubectl commands.
+kubectl commands are allowed against the homelab cluster (kubeconfig at
+`~/.kube/config-homelab` — set `KUBECONFIG=~/.kube/config-homelab` or pass
+`--kubeconfig`). Read-only commands (get, describe, logs, top) can run freely.
+State-changing ones (delete, cordon/drain, rollout restart, apply, scale)
+still need the user's go-ahead first, same as any other destructive/shared-
+state action — this permission is about being able to investigate and act
+inside the cluster, not a blanket license to skip confirmation on anything
+destructive.
 
 ## mcp-server/
 

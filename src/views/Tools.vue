@@ -42,8 +42,8 @@
       <!-- PICKER (album, or every album by one artist) -->
       <section class="bg-white rounded-xl border border-stone-200 p-4">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600">{{ pickerMode === 'artist' ? 'Artist' : 'Album' }}</h2>
-          <div v-if="!selected && !selectedArtist" class="flex text-xs border border-stone-200 rounded-full overflow-hidden flex-shrink-0">
+          <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600">{{ pickerMode === 'artist' ? 'Artist' : pickerMode === 'letter' ? 'Letter' : 'Album' }}</h2>
+          <div v-if="!selected && !selectedArtist && !selectedLetter" class="flex text-xs border border-stone-200 rounded-full overflow-hidden flex-shrink-0">
             <button
               class="px-2.5 py-1 transition-colors"
               :class="pickerMode === 'album' ? 'bg-amber-700 text-white' : 'text-stone-600 hover:bg-amber-50'"
@@ -54,13 +54,27 @@
               :class="pickerMode === 'artist' ? 'bg-amber-700 text-white' : 'text-stone-600 hover:bg-amber-50'"
               @click="setPickerMode('artist')"
             >Artist</button>
+            <button
+              class="px-2.5 py-1 transition-colors"
+              :class="pickerMode === 'letter' ? 'bg-amber-700 text-white' : 'text-stone-600 hover:bg-amber-50'"
+              @click="setPickerMode('letter')"
+            >Letter</button>
           </div>
         </div>
         <p class="text-xs text-stone-500 mb-3">
-          Run an operation on a single album, or every album by one artist — pick either, or use the audit section to scan the whole library.
+          Run an operation on a single album, or every album by one artist — or pick a letter to audit that whole ./mp3/&lt;letter&gt;/ folder.
         </p>
 
-        <div v-if="!selected && !selectedArtist" class="relative">
+        <div v-if="pickerMode === 'letter' && !selectedLetter" class="flex flex-wrap gap-1.5">
+          <button
+            v-for="l in LETTERS"
+            :key="l"
+            class="w-8 h-8 text-sm rounded border border-stone-200 uppercase hover:border-amber-700 hover:text-amber-700 transition-colors"
+            @click="pickLetter(l)"
+          >{{ l }}</button>
+        </div>
+
+        <div v-else-if="!selected && !selectedArtist && !selectedLetter" class="relative">
           <input
             v-model="query"
             type="search"
@@ -101,6 +115,13 @@
           >No matching {{ pickerMode === 'artist' ? 'artists' : 'albums' }}</div>
         </div>
 
+        <div v-else-if="selectedLetter" class="flex items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium uppercase">Letter “{{ selectedLetter }}”</div>
+          </div>
+          <button class="text-xs text-stone-500 hover:text-amber-700" @click="clearLetter">✕ Clear</button>
+        </div>
+
         <div v-else-if="selected" class="flex items-center gap-3">
           <img
             v-if="selected.coverArt"
@@ -130,9 +151,10 @@
       <section class="bg-white rounded-xl border border-stone-200 p-4">
         <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Audit (read-only)</h2>
         <div class="flex gap-2 flex-wrap">
-          <button class="btn" :disabled="(!selected && !selectedArtist) || busy" @click="doAuditAlbum">
+          <button v-if="!selectedLetter" class="btn" :disabled="(!selected && !selectedArtist) || busy" @click="doAuditAlbum">
             {{ selectedArtist ? 'Audit this artist' : 'Audit this album' }}
           </button>
+          <button v-else class="btn" :disabled="busy" @click="doAuditLetter">Audit letter “<span class="uppercase">{{ selectedLetter }}</span>”</button>
           <button class="btn" :disabled="busy" @click="doAuditLibrary">Audit whole library</button>
         </div>
         <p class="text-xs text-stone-500 mt-2">
@@ -308,29 +330,45 @@
 
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useConfigStore } from '../stores/config'
+import { useJobsStore } from '../stores/jobs'
 import { search, getArtist, coverUrl, startScan, getScanStatus } from '../api/subsonic'
 import {
-  getJob,
   startAudit, startCleanup, startNormalizeCover, startReEmbedCover,
   startConvert, startEnrich, startEnrichLyrics,
 } from '../api/maintenance'
 
 const config = useConfigStore()
+const jobsStore = useJobsStore()
+const { activeJobs, result, busy } = storeToRefs(jobsStore)
+const { launchJob } = jobsStore
 
-// ── picker: a single album, or every album by one artist ───────
-const pickerMode     = ref('album')  // 'album' | 'artist'
+// ── picker: a single album, every album by one artist, or an on-disk
+// ── letter folder (./mp3/<letter>/*, letter-mode audit only) ───
+const pickerMode     = ref('album')  // 'album' | 'artist' | 'letter'
 const query          = ref('')
 const results        = ref(null)
 const selected       = ref(null)   // a subsonic album: { id, name, artist, albumArtist, coverArt }
 const selectedArtist = ref(null)   // { id, name, albums: [subsonic album, …] }
+const selectedLetter = ref(null)   // on-disk letter dir name, e.g. 'a' or '1'
+const LETTERS = [...'abcdefghijklmnopqrstuvwxyz', '1']
 let debounce          = null
 
 function setPickerMode(m) {
   pickerMode.value = m
   query.value = ''
   results.value = null
+}
+
+function pickLetter(l) {
+  selectedLetter.value = l
+  result.value = null
+}
+function clearLetter() {
+  selectedLetter.value = null
+  result.value = null
 }
 
 function onQueryInput() {
@@ -389,66 +427,20 @@ function targets() {
   return []
 }
 
-// ── shared job plumbing ────────────────────────────────────────
-// Every operation is asynchronous: POST starts a job on the sidecar and we
-// poll getJob(id) until it finishes. Multiple jobs can run in parallel;
-// same-album jobs are serialized server-side.
-const activeJobs = ref([])   // running jobs: { id, label, status, message, progress, total, … }
-const result     = ref(null) // latest finished job → { ok, data } | { ok: false, error }
-let pollTimer    = null
-
-// Computed named `busy` so the template's :disabled="busy" bindings still work.
-const busy = computed(() => activeJobs.value.some(j => j.status === 'running'))
-
-function launchJob(startFn, label) {
-  startFn()
-    .then(({ id }) => {
-      activeJobs.value.push({ id, label, status: 'running', message: 'queued…', progress: 0, total: 0 })
-      ensurePolling()
-    })
-    .catch(e => {
-      result.value = { ok: false, error: e.message || String(e) }
-    })
-}
-
-function ensurePolling() {
-  if (pollTimer) return
-  pollTimer = setInterval(pollJobs, 1500)
-}
-
-async function pollJobs() {
-  const running = activeJobs.value.filter(j => j.status === 'running')
-  if (!running.length) { stopPolling(); return }
-  const states = await Promise.all(running.map(j => getJob(j.id).catch(() => null)))
-  for (const job of activeJobs.value) {
-    const st = states.find(s => s && s.id === job.id)
-    if (st) Object.assign(job, st)   // label is preserved — server state has none
-  }
-  const finished = activeJobs.value.filter(j => j.status !== 'running')
-  if (finished.length) {
-    result.value = jobToResult(finished[finished.length - 1])
-  }
-  activeJobs.value = activeJobs.value.filter(j => j.status === 'running')
-  if (!activeJobs.value.length) stopPolling()
-}
-
-function stopPolling() {
-  clearInterval(pollTimer)
-  pollTimer = null
-}
-
-// Map a finished job onto the shape the result panel renders.
-function jobToResult(job) {
-  if (job.status === 'error') return { ok: false, error: job.error || 'job failed' }
-  if (job.data && (job.data.problems || job.data.album)) return { ok: true, data: job.data }
-  return { ok: true, data: { changes: job.changes || [], applied: job.applied, op: job.op } }
-}
+// Job progress/results now live in useJobsStore (../stores/jobs.js) instead
+// of local refs, so navigating away from this view and back doesn't lose
+// track of a still-running (or just-finished) job — the sidecar job itself
+// was always fire-and-forget from the browser's perspective either way.
 
 // ── audit ────────────────────────────────────────────────────
 function doAuditAlbum() {
   for (const t of targets()) {
     launchJob(() => startAudit({ artist: t.artist, album: t.album }), `Audit ${t.album}`)
   }
+}
+function doAuditLetter() {
+  if (!selectedLetter.value) return
+  launchJob(() => startAudit({ scope: 'letter', letter: selectedLetter.value }), `Audit letter "${selectedLetter.value}"`)
 }
 function doAuditLibrary() {
   launchJob(() => startAudit({ scope: 'all' }), 'Audit whole library')
@@ -570,7 +562,7 @@ async function rescan() {
   }
 }
 
-onUnmounted(() => { stopPolling(); if (scanPoll) clearInterval(scanPoll) })
+onUnmounted(() => { if (scanPoll) clearInterval(scanPoll) })
 </script>
 
 

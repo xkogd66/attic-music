@@ -34,9 +34,10 @@ export function getRecentJobs() {
 
 // ── Audit (read-only) ───────────────────────────────────────────
 // scope: 'all' → whole-library report { scanned, problems }
+//        'letter' (+ letter) → same report, scoped to one ./mp3/<letter>/ dir
 // artist+album → single-album report { album: { folder, trackCount, conflicts, junkTags, missing } }
-export function startAudit({ scope, artist, album } = {}) {
-  return start('/audit', { scope, artist, album })
+export function startAudit({ scope, artist, album, letter } = {}) {
+  return start('/audit', { scope, artist, album, letter })
 }
 
 // ── Tag cleanup ─────────────────────────────────────────────────

@@ -247,6 +247,12 @@ func albumDirOf(artist, album string) (string, bool) {
 	return dir, ok
 }
 
+// letterOfDir returns the top-level ./mp3/<letter>/ component of an album
+// directory built by buildMap (root/letter/artist/album).
+func letterOfDir(dir string) string {
+	return filepath.Base(filepath.Dir(filepath.Dir(dir)))
+}
+
 func mp3Names(dir string) []string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -1435,10 +1441,12 @@ func main() {
 		}
 		artist := r.FormValue("artist")
 		album  := r.FormValue("album")
-		if r.FormValue("scope") != "all" {
+		scope  := r.FormValue("scope")
+		letter := r.FormValue("letter")
+		if scope != "all" && scope != "letter" {
 			dir, ok := albumDirOf(artist, album)
 			if !ok {
-				http.Error(w, "album directory not found (or use scope=all)", http.StatusNotFound)
+				http.Error(w, "album directory not found (or use scope=all/letter)", http.StatusNotFound)
 				return
 			}
 			id := startJob("audit", false, "", func(j *job) {
@@ -1448,10 +1456,17 @@ func main() {
 			writeJobAccepted(w, id)
 			return
 		}
+		if scope == "letter" && letter == "" {
+			http.Error(w, "letter required for scope=letter", http.StatusBadRequest)
+			return
+		}
 		id := startJob("audit", false, "", func(j *job) {
 			dirs    := map[string]bool{}
 			dirList := []string{}
 			for _, d := range albumDirMap {
+				if scope == "letter" && !strings.EqualFold(letterOfDir(d), letter) {
+					continue
+				}
 				if !dirs[d] {
 					dirs[d] = true
 					dirList = append(dirList, d)
