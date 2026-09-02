@@ -4,7 +4,7 @@ metadata:
   name: artist-images-config
   namespace: webapps
 data:
-  LOG_REQUESTS: "true"
+  LOG_REQUESTS: "false"
 ---
 apiVersion: apps/v1
 kind: Deployment
