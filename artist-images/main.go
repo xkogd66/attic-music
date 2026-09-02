@@ -1147,7 +1147,7 @@ func main() {
 	}
 
 	go func() {
-		for range time.Tick(5 * time.Minute) {
+		for range time.Tick(30 * time.Minute) {
 			if logRequests {
 				log.Printf("rescanning %s", root)
 			}
