@@ -128,7 +128,9 @@ func buildMap(root string) {
 	albumCoverMap = freshAlbum
 	albumDirMap  = freshAlbumDirs
 	artistDirMap = freshArtistDirs
-	log.Printf("indexed %d artist covers, %d album covers (%d dirs), %d artist dirs from %s", len(coverMap), len(albumCoverMap), len(albumDirMap), len(artistDirMap), root)
+	if logRequests {
+		log.Printf("indexed %d artist covers, %d album covers (%d dirs), %d artist dirs from %s", len(coverMap), len(albumCoverMap), len(albumDirMap), len(artistDirMap), root)
+	}
 }
 
 // toJPEG re-encodes an image gonic cannot read. Gonic decodes only what Go's
@@ -1146,7 +1148,9 @@ func main() {
 
 	go func() {
 		for range time.Tick(5 * time.Minute) {
-			log.Printf("rescanning %s", root)
+			if logRequests {
+				log.Printf("rescanning %s", root)
+			}
 			buildMap(root)
 		}
 	}()
