@@ -502,8 +502,11 @@ level.
    removed).
 3. **`main.js` cache-busting comment** is stale and could be removed.
 4. **Unauthenticated sidecar write endpoints** are safe from traversal by
-   design but are still open POST endpoints on the cluster network (fine inside
-   a private cluster, worth knowing).
+   design but are still open POST endpoints — and not just on the cluster
+   network: `nginx.conf` proxies `/artist-images/` at the server root, so
+   every sidecar endpoint is reachable unauthenticated from the public
+   internet via `https://music.ekskog.me/artist-images/...`, the same as the
+   frontend uses it. Worth knowing if this ever needs locking down.
 5. **README drift**: the structure section still lists `Folders.vue` and other
    pieces that no longer match exactly.
 6. **Hardcoded Fanart.tv API key** in `scripts/musiclib.py` (default in
@@ -523,4 +526,47 @@ level.
    bars and maps finished jobs onto the result view. `scripts/musiclib.py`
    remains as the standalone CLI (it is server-agnostic and never touched the
    server), but the web path now overlaps it — see the overlap notes above.
+8. **Planned (not started): make the Go sidecar the single owner of
+   tag-normalization rules.** Today `scripts/musiclib.py` and
+   `artist-images/main.go` each reimplement the same golden-tag rules
+   independently (see item 7) — a real single-source-of-truth risk, not just
+   duplication, since the two can silently drift. Decided approach once
+   picked up:
+   - **Full migration**: `musiclib.py` becomes a thin HTTP client for every
+     overlapping op — cleanup (golden-set / sort-tags / lowercase /
+     tag-from-filename), audit, cover normalize/re-embed, enrich
+     (genre+year, lyrics), and convert — calling the sidecar instead of its
+     own `mutagen`-based code for all of them. musiclib.py keeps only what
+     has no sidecar equivalent: nuclear clean+rename, folder rename/slugify,
+     the interactive MusicBrainz tagger, utilities, config, and the
+     onboarding workflows (which would call the sidecar's HTTP ops instead of
+     local functions internally).
+   - **Network path**: the public URL
+     (`https://music.ekskog.me/artist-images/...`), same as the frontend —
+     already open per item 4, no new access needed, `musiclib.py` gets a
+     configurable base URL.
+   - **Blocking prerequisite — format coverage**: the sidecar's cleanup ops
+     (`mp3Names(dir)` in `main.go`) only ever touch `.mp3`; `musiclib.py`
+     cleans `AUDIO_EXTS = {mp3, flac, ogg, m4a, wav, aiff}`. Migrating before
+     closing this gap would silently drop non-mp3 cleanup. Decided scope:
+     **extend the sidecar to mp3 + FLAC only** before migrating — add Vorbis-
+     comment read/write for FLAC (`github.com/go-flac/go-flac` +
+     `github.com/go-flac/flacvorbis` have solid, maintained support) behind a
+     canonical-field abstraction (Title/Artist/AlbumArtist/Album/Genre/Year/
+     TrackNum/DiscNum/Compilation → ID3 frame ID *or* Vorbis comment name),
+     so `cleanupGoldenSet`/`cleanupSortTags`/`cleanupLowercase`/
+     `cleanupTagFromFilename`/`auditDir`/`enrichGenreYear`/`enrichLyrics` all
+     dispatch on file extension instead of assuming ID3. ogg/m4a/wav/aiff
+     stay on musiclib's local path — Go library support for writing them is
+     weak-to-nonexistent (no library I'd trust for ogg or wav/aiff, m4a needs
+     hand-rolled atom writing), so they're not worth the correctness risk of
+     shipping unverified against a real library (this repo's rules forbid
+     Claude from building/running the Go binary to check).
+   - This does **not** touch `/album-tags` / `/track-tags` (the web UI's
+     manual tag editor, used by `Artists.vue`/`Albums.vue`) — those stay
+     mp3-only ID3 via the existing `writeFrames`, out of scope for this
+     musiclib-overlap fix.
+   - New Go dependencies require `go mod tidy` via the documented
+     `docker run golang:1.22-bookworm ...` command (see artist-images/
+     section above) — that step is for the user to run, not Claude.
 

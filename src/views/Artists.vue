@@ -128,7 +128,7 @@
         <!-- Recently Added -->
         <div v-if="recentArtists.length" class="mb-8">
           <h2 class="font-serif text-xl font-semibold mb-3">Recently Added</h2>
-          <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width:none;-ms-overflow-style:none">
+          <div class="flex flex-wrap gap-3 overflow-hidden" :style="recentExpanded ? '' : 'max-height:124px'">
             <div v-for="artist in recentArtists" :key="artist.id" class="flex-none w-24 cursor-pointer group" @click="openArtist(artist)">
               <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03] relative">
                 <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
@@ -137,11 +137,12 @@
               <div class="text-sm font-medium truncate leading-tight">{{ artist.name }}</div>
             </div>
           </div>
+          <button v-if="!recentExpanded && recentArtists.length > 10" class="mt-2 text-sm text-amber-700 hover:underline" @click="recentExpanded = true">Show more</button>
         </div>
         <!-- Discover Artists -->
         <div v-if="discoverArtists.length" class="mb-8">
           <h2 class="font-serif text-xl font-semibold mb-3">Discover Artists</h2>
-          <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width:none;-ms-overflow-style:none">
+          <div class="flex flex-wrap gap-3 overflow-hidden" :style="discoverExpanded ? '' : 'max-height:124px'">
             <div v-for="artist in discoverArtists" :key="artist.id" class="flex-none w-24 cursor-pointer group" @click="openArtist(artist)">
               <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-2 transition-transform duration-200 group-hover:scale-[1.03] relative">
                 <div class="w-full h-full flex items-center justify-center font-serif text-3xl font-semibold text-stone-500 select-none">{{ artist.name[0]?.toUpperCase() }}</div>
@@ -150,6 +151,7 @@
               <div class="text-sm font-medium truncate leading-tight">{{ artist.name }}</div>
             </div>
           </div>
+          <button v-if="!discoverExpanded && discoverArtists.length > 10" class="mt-2 text-sm text-amber-700 hover:underline" @click="discoverExpanded = true">Show more</button>
         </div>
         <div v-if="recentArtists.length || discoverArtists.length" class="border-b border-stone-200 mb-6"></div>
         <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
@@ -485,6 +487,7 @@ import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGe
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, searchArtistImages } from '../api/covers'
 import { GENRES } from '../api/genres'
+import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem  from '../components/TrackItem.vue'
 import ArtistCard from '../components/ArtistCard.vue'
 
@@ -496,6 +499,9 @@ const LETTERS = ['#', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'
 
 const view    = ref('grid')
 const loading = ref(false)
+
+const recentExpanded   = ref(false)
+const discoverExpanded = ref(false)
 
 const artistIndex    = ref([])
 const expandedGroups = reactive({})
@@ -637,12 +643,11 @@ const showLocation  = ref(false)
 const albumDetailCoverSrc   = ref(null)
 const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'
 
-const coverSearchOpen    = ref(false)
-const coverSearchLoading = ref(false)
-const coverCandidates    = ref([])
-const coverSearchTarget  = ref('album')  // 'album' | 'avatar' — which upload the shared modal drives
-const coverSaving        = ref(false)
-const coverSearchError   = ref('')  // shown in the modal when an upload/save fails
+const {
+  open: coverSearchOpen, loading: coverSearchLoading, candidates: coverCandidates,
+  target: coverSearchTarget, saving: coverSaving, error: coverSearchError,
+  search: searchCovers, close: closeCoverSearch, upload: uploadCover, uploadFromUrl: uploadCoverFromUrl,
+} = useCoverSearch()
 
 const TAGS_PREFIX  = 'attic_tags_'
 const GENRE_PREFIX = 'attic_genre_'
@@ -866,25 +871,12 @@ async function uploadArtistAvatar(e) {
   const file = e.target.files[0]
   if (!file || !currentArtist.value) return
   const name = currentArtist.value.name
-  const form = new FormData()
-  form.append('cover', file)
-  try {
-    const res = await fetch(
-      `/artist-images/upload-avatar?name=${encodeURIComponent(name)}`,
-      { method: 'POST', body: form }
-    )
-    if (res.ok) {
-      // cache-bust so the new image is fetched immediately
-      artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}`
-      coverSearchOpen.value = false
-    } else {
-      coverSearchError.value = (await res.text().catch(() => '')) || `Upload failed (${res.status})`
-    }
-  } catch (_) {
-    coverSearchError.value = 'Upload failed — network error'
-  } finally {
-    e.target.value = ''
-  }
+  await uploadCover(
+    `/artist-images/upload-avatar?name=${encodeURIComponent(name)}`,
+    file, 'avatar.jpg',
+    () => { artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}` }
+  )
+  e.target.value = ''
 }
 
 async function openAlbum(album) {
@@ -909,91 +901,44 @@ async function uploadAlbumCover(e) {
   if (!file || !currentAlbum.value) return
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  const form = new FormData()
-  form.append('cover', file)
-  try {
-    const res = await fetch(
-      `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
-      { method: 'POST', body: form }
-    )
-    if (res.ok) {
+  await uploadCover(
+    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+    file, 'cover.jpg',
+    () => {
       albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
       albumDetailCoverState.value = 'sidecar'
-      coverSearchOpen.value = false
-    } else {
-      coverSearchError.value = (await res.text().catch(() => '')) || `Upload failed (${res.status})`
     }
-  } catch (_) {
-    coverSearchError.value = 'Upload failed — network error'
-  }
+  )
+  e.target.value = ''
 }
 
 // Save a chosen remote cover: pull its bytes (both CDNs allow CORS) and re-POST
 // to the sidecar /upload, same as a device upload.
 async function chooseCover(c) {
-  if (!currentAlbum.value || coverSaving.value) return
-  coverSaving.value = true
+  if (!currentAlbum.value) return
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  // Down goes the modal — the sidecar embeds into the mp3s in the background.
-  coverSearchOpen.value = false
-  try {
-    // Last.fm's CDN picks the format from Accept — the browser's default asks
-    // for WebP, which gonic (Go stdlib) cannot decode. Ask for JPEG/PNG —
-    // cache: reload because the modal's <img> preview already cached the
-    // WebP variant and the CDN sends no Vary: Accept.
-    const blob = await (await fetch(c.url, { cache: 'reload', headers: { Accept: 'image/jpeg,image/png' } })).blob()
-    const form = new FormData()
-    form.append('cover', blob, 'cover.jpg')
-    const res = await fetch(
-      `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
-      { method: 'POST', body: form }
-    )
-    if (res.ok) {
+  await uploadCoverFromUrl(
+    c.url,
+    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+    'cover.jpg',
+    () => {
       albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
       albumDetailCoverState.value = 'sidecar'
-    } else {
-      coverSearchError.value = (await res.text().catch(() => '')) || `Save failed (${res.status})`
     }
-  } catch (_) {
-    coverSearchError.value = 'Save failed — could not fetch or upload the image'
-  } finally {
-    coverSaving.value = false
-  }
+  )
 }
 
 async function openCoverSearch() {
   if (!currentAlbum.value) return
-  coverSearchTarget.value = 'album'
-  coverSearchError.value = ''
-  coverSearchOpen.value = true
-  coverSearchLoading.value = true
-  coverCandidates.value = []
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  try {
-    coverCandidates.value = await searchAlbumCovers(artist, album)
-  } finally {
-    coverSearchLoading.value = false
-  }
-}
-
-function closeCoverSearch() {
-  coverSearchOpen.value = false
+  await searchCovers('album', () => searchAlbumCovers(artist, album))
 }
 
 async function openAvatarSearch() {
   if (!currentArtist.value) return
-  coverSearchTarget.value = 'avatar'
-  coverSearchError.value = ''
-  coverSearchOpen.value = true
-  coverSearchLoading.value = true
-  coverCandidates.value = []
-  try {
-    coverCandidates.value = await searchArtistImages(currentArtist.value.name)
-  } finally {
-    coverSearchLoading.value = false
-  }
+  await searchCovers('avatar', () => searchArtistImages(currentArtist.value.name))
 }
 
 // The shared modal drives whichever target is open.
@@ -1006,28 +951,14 @@ function uploadFromDevice(e) {
 
 // Save a chosen remote avatar — same as chooseCover, but the avatar endpoint.
 async function chooseAvatar(c) {
-  if (!currentArtist.value || coverSaving.value) return
-  coverSaving.value = true
+  if (!currentArtist.value) return
   const name = currentArtist.value.name
-  try {
-    const blob = await (await fetch(c.url, { cache: 'reload' })).blob()
-    const form = new FormData()
-    form.append('cover', blob, 'avatar.jpg')
-    const res = await fetch(
-      `/artist-images/upload-avatar?name=${encodeURIComponent(name)}`,
-      { method: 'POST', body: form }
-    )
-    if (res.ok) {
-      artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}`
-      coverSearchOpen.value = false
-    } else {
-      coverSearchError.value = (await res.text().catch(() => '')) || `Save failed (${res.status})`
-    }
-  } catch (_) {
-    coverSearchError.value = 'Save failed — could not fetch or upload the image'
-  } finally {
-    coverSaving.value = false
-  }
+  await uploadCoverFromUrl(
+    c.url,
+    `/artist-images/upload-avatar?name=${encodeURIComponent(name)}`,
+    'avatar.jpg',
+    () => { artistDetailImageUrl.value = `/artist-images/avatar?name=${encodeURIComponent(name)}&t=${Date.now()}` }
+  )
 }
 
 

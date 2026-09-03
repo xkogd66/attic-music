@@ -360,6 +360,7 @@
               </button>
             </div>
           </div>
+          <p v-if="coverSearchError" class="px-5 pb-2 text-xs text-red-500">{{ coverSearchError }}</p>
           <div class="px-5 py-3 border-t border-stone-100 flex items-center justify-between">
             <label class="text-xs text-stone-500 hover:text-amber-700 cursor-pointer">
               Upload from device
@@ -382,6 +383,7 @@ import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, get
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers } from '../api/covers'
 import { GENRES } from '../api/genres'
+import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem from '../components/TrackItem.vue'
 
 const route  = useRoute()
@@ -407,10 +409,11 @@ const showLocation = ref(false)
 const albumDetailCoverSrc   = ref(null)
 const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'
 
-const coverSearchOpen    = ref(false)
-const coverSearchLoading = ref(false)
-const coverCandidates    = ref([])
-const coverSaving        = ref(false)
+const {
+  open: coverSearchOpen, loading: coverSearchLoading, candidates: coverCandidates,
+  saving: coverSaving, error: coverSearchError,
+  search: searchCovers, close: closeCoverSearch, upload: uploadCover, uploadFromUrl: uploadCoverFromUrl,
+} = useCoverSearch()
 
 const TAGS_PREFIX  = 'attic_tags_'
 const GENRE_PREFIX = 'attic_genre_'
@@ -773,67 +776,39 @@ async function uploadAlbumCover(e) {
   if (!file || !currentAlbum.value) return
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  const form = new FormData()
-  form.append('cover', file)
-  const res = await fetch(
+  await uploadCover(
     `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
-    { method: 'POST', body: form }
+    file, 'cover.jpg',
+    () => {
+      albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
+      albumDetailCoverState.value = 'sidecar'
+    }
   )
-  if (res.ok) {
-    albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
-    albumDetailCoverState.value = 'sidecar'
-    coverSearchOpen.value = false
-  }
+  e.target.value = ''
 }
 
 // Save a chosen remote cover: pull its bytes (both CDNs allow CORS) and re-POST
 // to the sidecar /upload, same as a device upload.
 async function chooseCover(c) {
-  if (!currentAlbum.value || coverSaving.value) return
-  coverSaving.value = true
+  if (!currentAlbum.value) return
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  // Down goes the modal — the sidecar embeds into the mp3s in the background.
-  coverSearchOpen.value = false
-  try {
-    // Last.fm's CDN picks the format from Accept — the browser's default asks
-    // for WebP, which gonic (Go stdlib) cannot decode. Ask for JPEG/PNG —
-    // cache: reload because the modal's <img> preview already cached the
-    // WebP variant and the CDN sends no Vary: Accept.
-    const blob = await (await fetch(c.url, { cache: 'reload', headers: { Accept: 'image/jpeg,image/png' } })).blob()
-    const form = new FormData()
-    form.append('cover', blob, 'cover.jpg')
-    const res = await fetch(
-      `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
-      { method: 'POST', body: form }
-    )
-    if (res.ok) {
+  await uploadCoverFromUrl(
+    c.url,
+    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+    'cover.jpg',
+    () => {
       albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
       albumDetailCoverState.value = 'sidecar'
     }
-  } catch (_) {
-    /* leave modal open so the user can pick another */
-  } finally {
-    coverSaving.value = false
-  }
+  )
 }
 
 async function openCoverSearch() {
   if (!currentAlbum.value) return
-  coverSearchOpen.value = true
-  coverSearchLoading.value = true
-  coverCandidates.value = []
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  try {
-    coverCandidates.value = await searchAlbumCovers(artist, album)
-  } finally {
-    coverSearchLoading.value = false
-  }
-}
-
-function closeCoverSearch() {
-  coverSearchOpen.value = false
+  await searchCovers('album', () => searchAlbumCovers(artist, album))
 }
 
 watch(() => route.params.id, (id) => {
