@@ -10,3 +10,10 @@
 @media (max-width: 767px) {
   input, select, textarea { font-size: 16px !important; }
 }
+/* All-white covers vanish against the white background — give every image a
+   hairline. border-radius: inherit so the border follows rounded wrappers
+   instead of being clipped off at the corners. */
+img {
+  border: 1px solid #000;
+  border-radius: inherit;
+}
