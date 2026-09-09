@@ -43,7 +43,7 @@
 
           <!-- ALBUM ART -->
           <div v-if="!lyricsView" class="flex-1 min-h-0 flex items-center justify-center py-2">
-            <div class="w-full aspect-square max-h-full bg-amber-50 overflow-hidden shadow-2xl rounded-2xl">
+            <div class="h-full max-w-full aspect-square bg-amber-50 overflow-hidden shadow-2xl rounded-2xl">
               <img
                 v-if="player.currentTrack?.coverArt"
                 :src="coverUrl(player.currentTrack.coverArt, 600)"
