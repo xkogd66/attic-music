@@ -1,6 +1,6 @@
 <template>
   <Transition name="slide-up">
-    <div v-if="show" class="fixed inset-0 bg-stone-50 z-50 flex flex-col md:hidden">
+    <div v-if="show" class="fixed inset-0 bg-stone-50 z-[60] flex flex-col md:hidden">
 
       <!-- HEADER -->
       <div class="flex items-center justify-between px-6 pt-12 pb-4 flex-shrink-0">
@@ -140,14 +140,11 @@
           <!-- CONTROLS -->
           <div class="flex-shrink-0 mb-8">
             <div class="flex items-center justify-between mb-6">
-              <div class="flex flex-col items-center gap-1">
-                <button
-                  class="p-2 transition-colors"
-                  :class="player.shuffle ? 'text-amber-700' : 'text-stone-500'"
-                  @click="player.shuffle = !player.shuffle"
-                ><Shuffle :size="22" /></button>
-                <span class="text-[10px] uppercase tracking-wide" :class="player.shuffle ? 'text-amber-700' : 'text-stone-500'">shuffle</span>
-              </div>
+              <button
+                class="p-2 transition-colors"
+                :class="player.shuffle ? 'text-amber-700' : 'text-stone-500'"
+                @click="player.shuffle = !player.shuffle"
+              ><Shuffle :size="22" /></button>
               <button class="p-2 text-stone-700 active:text-amber-700" @click="player.prevTrack()">
                 <SkipBack :size="32" />
               </button>
@@ -161,14 +158,11 @@
               <button class="p-2 text-stone-700 active:text-amber-700" @click="player.nextTrack()">
                 <SkipForward :size="32" />
               </button>
-              <div class="flex flex-col items-center gap-1">
-                <button
-                  class="p-2 transition-colors"
-                  :class="player.repeat ? 'text-amber-700' : 'text-stone-500'"
-                  @click="player.repeat = !player.repeat"
-                ><Repeat :size="22" /></button>
-                <span class="text-[10px] uppercase tracking-wide" :class="player.repeat ? 'text-amber-700' : 'text-stone-500'">repeat</span>
-              </div>
+              <button
+                class="p-2 transition-colors"
+                :class="player.repeat ? 'text-amber-700' : 'text-stone-500'"
+                @click="player.repeat = !player.repeat"
+              ><Repeat :size="22" /></button>
             </div>
           </div>
 
