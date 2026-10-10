@@ -32,6 +32,13 @@ export function getRecentJobs() {
     .then(res => (res.ok ? res.json() : Promise.reject(new Error(`jobs: HTTP ${res.status}`))))
 }
 
+// ── Sidecar folder index ────────────────────────────────────────
+// Rebuilds the sidecar's in-memory folder index now (it otherwise refreshes
+// only on startup and on its own 30-minute timer).
+export function startRescan() {
+  return start('/rescan')
+}
+
 // ── Audit (read-only) ───────────────────────────────────────────
 // scope: 'all' → whole-library report { scanned, problems }
 //        'letter' (+ letter) → same report, scoped to one ./mp3/<letter>/ dir

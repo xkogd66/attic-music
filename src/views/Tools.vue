@@ -4,13 +4,22 @@
     <div class="px-4 md:px-6 py-3 md:py-6 border-b border-stone-200 bg-white flex-shrink-0">
       <div class="flex items-center justify-between">
         <h1 class="font-serif text-3xl font-semibold">Library Tools</h1>
-        <button
-          class="text-xs border border-stone-200 rounded-full px-3 py-1.5 text-stone-600 hover:border-amber-700 hover:text-amber-700 transition-colors disabled:opacity-50"
-          :disabled="scanning"
-          @click="rescan"
-        >
-          {{ scanning ? 'Scanning…' : '↻ Rescan library' }}
-        </button>
+        <div class="flex flex-wrap justify-end gap-2">
+          <button
+            class="text-xs border border-stone-200 rounded-full px-3 py-1.5 text-stone-600 hover:border-amber-700 hover:text-amber-700 transition-colors disabled:opacity-50"
+            :disabled="busy"
+            @click="rescanSidecar"
+          >
+            ↻ Rescan sidecar index
+          </button>
+          <button
+            class="text-xs border border-stone-200 rounded-full px-3 py-1.5 text-stone-600 hover:border-amber-700 hover:text-amber-700 transition-colors disabled:opacity-50"
+            :disabled="scanning"
+            @click="rescan"
+          >
+            {{ scanning ? 'Scanning…' : '↻ Rescan library' }}
+          </button>
+        </div>
       </div>
       <p class="text-sm text-stone-500 mt-1">
         The musiclib maintenance workflows (audit · cleanup · artwork · convert · enrich) now live in the browser.
@@ -337,7 +346,7 @@ import { useJobsStore } from '../stores/jobs'
 import { search, getArtist, coverUrl, startScan, getScanStatus } from '../api/subsonic'
 import {
   startAudit, startCleanup, startNormalizeCover, startReEmbedCover,
-  startConvert, startEnrich, startEnrichLyrics,
+  startConvert, startEnrich, startEnrichLyrics, startRescan,
 } from '../api/maintenance'
 
 const config = useConfigStore()
@@ -532,6 +541,11 @@ function lyricsApply() {
   for (const t of ts) {
     launchJob(() => startEnrichLyrics(t.artist, t.album, { apply: true }), `Embed lyrics — ${t.album}`)
   }
+}
+
+// ── sidecar folder index rescan ──────────────────────────────
+function rescanSidecar() {
+  launchJob(() => startRescan(), 'Rescan sidecar index')
 }
 
 // ── library rescan (same poll pattern as the sidebar) ────────
