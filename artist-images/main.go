@@ -1654,6 +1654,22 @@ func main() {
 		writeJobAccepted(w, id)
 	})
 
+	// ── folder index rescan ──────────────────────────────────────────────
+	// POST /rescan rebuilds the in-memory folder index now instead of waiting
+	// for the 30-minute tick.
+	http.HandleFunc("/rescan", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		id := startJob("rescan", true, "", func(j *job) {
+			j.setMessage("rescanning " + root)
+			buildMap(root)
+			j.done([]change{{File: "library", Detail: fmt.Sprintf("indexed %d album folders, %d artist folders", len(albumDirMap), len(artistDirMap))}}, nil)
+		})
+		writeJobAccepted(w, id)
+	})
+
 	// ── job status ───────────────────────────────────────────────────────
 	// GET /job?id= → one job's state; GET /jobs → recent jobs (newest first).
 	http.HandleFunc("/job", func(w http.ResponseWriter, r *http.Request) {
