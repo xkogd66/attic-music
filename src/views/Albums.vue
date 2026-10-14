@@ -347,7 +347,7 @@
             <button class="text-stone-600 hover:text-stone-900" @click="closeCoverSearch">✕</button>
           </div>
           <div class="px-5 py-4 overflow-y-auto">
-            <div v-if="coverSearchLoading" class="py-10 text-center text-stone-600 text-sm">Searching…</div>
+            <div v-if="coverSearchLoading && !coverCandidates.length" class="py-10 text-center text-stone-600 text-sm">Searching…</div>
             <div v-else-if="!coverCandidates.length" class="py-10 text-center text-stone-600 text-sm">No covers found.</div>
             <div v-else class="grid grid-cols-3 gap-3">
               <button v-for="(c, i) in coverCandidates" :key="i"
@@ -360,13 +360,16 @@
               </button>
             </div>
           </div>
+          <p v-if="coverSaving" class="px-5 pb-2 text-xs text-stone-600 flex items-center gap-2">
+            <span class="inline-block w-3 h-3 rounded-full border-2 border-stone-300 border-t-amber-600 animate-spin"></span>Saving…
+          </p>
           <p v-if="coverSearchError" class="px-5 pb-2 text-xs text-red-500">{{ coverSearchError }}</p>
           <div class="px-5 py-3 border-t border-stone-100 flex items-center justify-between">
             <label class="text-xs text-stone-500 hover:text-amber-700 cursor-pointer">
               Upload from device
-              <input type="file" accept="image/*" class="hidden" @change="uploadAlbumCover" />
+              <input type="file" accept="image/*" class="hidden" :disabled="coverSaving" @change="uploadAlbumCover" />
             </label>
-            <button class="text-xs px-4 py-2 rounded-full border border-stone-200 hover:border-stone-400 transition-colors" @click="closeCoverSearch">Cancel</button>
+            <button class="text-xs px-4 py-2 rounded-full border border-stone-200 hover:border-stone-400 transition-colors" @click="closeCoverSearch">{{ coverSaving ? 'Close' : 'Cancel' }}</button>
           </div>
         </div>
       </div>
@@ -808,7 +811,7 @@ async function openCoverSearch() {
   if (!currentAlbum.value) return
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
-  await searchCovers('album', () => searchAlbumCovers(artist, album))
+  await searchCovers('album', add => searchAlbumCovers(artist, album, add))
 }
 
 watch(() => route.params.id, (id) => {

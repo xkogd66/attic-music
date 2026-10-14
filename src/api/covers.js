@@ -4,6 +4,9 @@ import { useConfigStore } from '../stores/config'
 // album it has no art for, so we drop any URL containing this hash.
 const LASTFM_PLACEHOLDER = '2a96cbd8b46e442fc41c2b86b821562f'
 
+// A hung upstream must not hold the picker open forever.
+const FETCH_TIMEOUT_MS = 8000
+
 const LASTFM_SIZE_RANK = { small: 1, medium: 2, large: 3, extralarge: 4, mega: 5, '': 0 }
 
 function ensureArray(val) {
@@ -24,43 +27,45 @@ function bestLastfmImage(images) {
 }
 
 // Last.fm: the exact album (album.getInfo) plus broader name matches
-// (album.search), each contributing its largest cover.
-async function lastfmCovers(artist, album) {
+// (album.search), each contributing its largest cover. The two calls run in
+// parallel and each reports via onResult as soon as it lands.
+async function lastfmCovers(artist, album, onResult) {
   const config = useConfigStore()
   if (!config.lastfmKey) return []
 
-  const out = []
-  const seen = new Set()
-  const push = url => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Last.fm' }) } }
   const base = `https://ws.audioscrobbler.com/2.0/?api_key=${encodeURIComponent(config.lastfmKey)}&format=json`
+  const call = async (query, pick) => {
+    try {
+      const res  = await fetch(`${base}&${query}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+      const urls = pick(await res.json()).filter(Boolean)
+      const out  = urls.map(url => ({ url, source: 'Last.fm' }))
+      if (out.length) onResult?.(out)
+      return out
+    } catch (_) { return [] }
+  }
 
-  try {
-    const res  = await fetch(`${base}&method=album.getinfo&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`)
-    const json = await res.json()
-    push(bestLastfmImage(json?.album?.image))
-  } catch (_) {}
-
-  try {
-    const res  = await fetch(`${base}&method=album.search&album=${encodeURIComponent(album)}&limit=10`)
-    const json = await res.json()
-    for (const m of ensureArray(json?.results?.albummatches?.album)) push(bestLastfmImage(m.image))
-  } catch (_) {}
-
-  return out
+  const lists = await Promise.all([
+    call(`method=album.getinfo&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+      j => [bestLastfmImage(j?.album?.image)]),
+    call(`method=album.search&album=${encodeURIComponent(album)}&limit=10`,
+      j => ensureArray(j?.results?.albummatches?.album).map(m => bestLastfmImage(m.image))),
+  ])
+  const seen = new Set()
+  return lists.flat().filter(c => !seen.has(c.url) && seen.add(c.url))
 }
 
 // Aggregate cover candidates for an album — Last.fm only.
 // Returns [{ url, source }]. The CDN sends Access-Control-Allow-Origin: *, so
 // the caller can fetch the chosen URL's bytes to re-upload as cover.jpg.
-export async function searchAlbumCovers(artist, album) {
-  return lastfmCovers(artist, album)
+export async function searchAlbumCovers(artist, album, onResult) {
+  return lastfmCovers(artist, album, onResult)
 }
 
 const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php'
 
 async function wikipediaGet(params) {
   const url = `${WIKIPEDIA_API}?${new URLSearchParams({ ...params, format: 'json', origin: '*' })}`
-  const res = await fetch(url)
+  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   return res.json()
 }
 
@@ -86,35 +91,45 @@ async function wikipediaPageTitle(name) {
 // Wikipedia article images for an artist: the infobox lead photo plus every
 // other embedded photo, largest size available. No aspect-ratio filtering —
 // the avatar UI already center-crops to a circle regardless of source shape.
-async function wikipediaArtistImages(name) {
+async function wikipediaArtistImages(name, onResult) {
   const out = []
   const seen = new Set()
-  const push = url => { if (url && !seen.has(url)) { seen.add(url); out.push({ url, source: 'Wikipedia' }) } }
-
-  const title = await wikipediaPageTitle(name)
-  if (!title) return out
-
-  const lead = await wikipediaGet({ action: 'query', titles: title, prop: 'pageimages', piprop: 'thumbnail', pithumbsize: 800 })
-  push(firstPage(lead)?.thumbnail?.source)
-
-  const imagesRes = await wikipediaGet({ action: 'query', titles: title, prop: 'images', imlimit: 30 })
-  const files = (firstPage(imagesRes)?.images || [])
-    .map(i => i.title)
-    .filter(t => !NOISE_FILENAME.test(t))
-    .slice(0, 15)
-
-  if (files.length) {
-    const info = await wikipediaGet({ action: 'query', titles: files.join('|'), prop: 'imageinfo', iiprop: 'url|size' })
-    for (const p of Object.values(info?.query?.pages || {})) {
-      const ii = p.imageinfo?.[0]
-      if (ii?.width >= 200) push(ii.url)
-    }
+  const push = url => {
+    if (!url || seen.has(url)) return
+    seen.add(url)
+    const c = { url, source: 'Wikipedia' }
+    out.push(c)
+    onResult?.([c])
   }
 
+  try {
+    const title = await wikipediaPageTitle(name)
+    if (!title) return out
+
+    // Lead photo and the embedded-image list are independent — fetch together,
+    // so the lead shows up as soon as it's ready.
+    const leadP = wikipediaGet({ action: 'query', titles: title, prop: 'pageimages', piprop: 'thumbnail', pithumbsize: 800 })
+      .then(lead => push(firstPage(lead)?.thumbnail?.source))
+    const embeddedP = (async () => {
+      const imagesRes = await wikipediaGet({ action: 'query', titles: title, prop: 'images', imlimit: 30 })
+      const files = (firstPage(imagesRes)?.images || [])
+        .map(i => i.title)
+        .filter(t => !NOISE_FILENAME.test(t))
+        .slice(0, 15)
+      if (!files.length) return
+      const info = await wikipediaGet({ action: 'query', titles: files.join('|'), prop: 'imageinfo', iiprop: 'url|size', iiurlwidth: 1000 })
+      for (const p of Object.values(info?.query?.pages || {})) {
+        const ii = p.imageinfo?.[0]
+        // thumburl: a 1000px render, not the (often multi-MB) original
+        if (ii?.width >= 200) push(ii.thumburl || ii.url)
+      }
+    })()
+    await Promise.allSettled([leadP, embeddedP])
+  } catch (_) {}
   return out
 }
 
 // Aggregate image candidates for an artist — same shape as searchAlbumCovers.
-export async function searchArtistImages(name) {
-  return wikipediaArtistImages(name)
+export async function searchArtistImages(name, onResult) {
+  return wikipediaArtistImages(name, onResult)
 }

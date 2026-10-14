@@ -18,8 +18,14 @@ export function useCoverSearch() {
     open.value        = true
     loading.value     = true
     candidates.value  = []
+    // searchFn(add) streams candidates via add() as each source answers, so
+    // the grid fills in while the rest of the lookup is still running.
+    const add = list => {
+      const have = new Set(candidates.value.map(c => c.url))
+      candidates.value.push(...list.filter(c => !have.has(c.url)))
+    }
     try {
-      candidates.value = await searchFn()
+      await searchFn(add)
     } finally {
       loading.value = false
     }
@@ -33,6 +39,7 @@ export function useCoverSearch() {
   // onSuccess() and closes the modal, on failure sets `error` and leaves it open.
   async function upload(url, body, filename, onSuccess) {
     saving.value = true
+    error.value  = ''
     try {
       const form = new FormData()
       form.append('cover', body, filename)
@@ -56,12 +63,20 @@ export function useCoverSearch() {
   // cache: reload because the modal's <img> preview already cached the WebP
   // variant and the CDN sends no Vary: Accept.
   async function uploadFromUrl(sourceUrl, uploadUrl, filename, onSuccess) {
+    // saving covers the download too — it's the slow half for big images.
+    saving.value = true
+    error.value  = ''
+    let blob
     try {
-      const blob = await (await fetch(sourceUrl, { cache: 'reload', headers: { Accept: 'image/jpeg,image/png' } })).blob()
-      await upload(uploadUrl, blob, filename, onSuccess)
+      const res = await fetch(sourceUrl, { cache: 'reload', headers: { Accept: 'image/jpeg,image/png' } })
+      if (!res.ok) throw new Error(res.status)
+      blob = await res.blob()
     } catch (_) {
-      error.value = 'Save failed — could not fetch the image'
+      error.value  = 'Save failed — could not fetch the image'
+      saving.value = false
+      return
     }
+    await upload(uploadUrl, blob, filename, onSuccess)
   }
 
   return { open, loading, candidates, target, saving, error, search, close, upload, uploadFromUrl }
