@@ -1,4 +1,5 @@
 import { useConfigStore } from '../stores/config'
+import { startScan } from './subsonic'
 
 // Last.fm's "no image" placeholder — the same grey star is returned for every
 // album it has no art for, so we drop any URL containing this hash.
@@ -132,4 +133,30 @@ async function wikipediaArtistImages(name, onResult) {
 // Aggregate image candidates for an artist — same shape as searchAlbumCovers.
 export async function searchArtistImages(name, onResult) {
   return wikipediaArtistImages(name, onResult)
+}
+
+// Albums whose cover was replaced this session, id → cache-buster. Reopening
+// an album otherwise rebuilds its cover from gonic's getCoverArt URL, which
+// still serves the old image (cached by the browser and by gonic until rescan).
+const replacedCovers = new Map()
+
+// The sidecar embeds the cover into the mp3s in the background after its 202
+// (~2s for a typical album), and gonic only sees embedded art on a scan.
+// ponytail: fixed delay, not a handshake — a huge album could still be
+// mid-embed; the manual rescan in the sidebar covers that.
+const EMBED_SETTLE_MS = 6000
+
+export function sidecarAlbumCover(artist, album, id) {
+  const t = Date.now()
+  if (id) replacedCovers.set(id, t)
+  setTimeout(() => startScan().catch(() => {}), EMBED_SETTLE_MS)
+  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${t}`
+}
+
+// The detail-page cover: the freshly uploaded one if there is one, else gonic's.
+export function detailCoverSrc(album, gonicUrl) {
+  const t = replacedCovers.get(album.id)
+  if (!t) return gonicUrl
+  const artist = album.albumArtist || album.artist
+  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album.name)}&t=${t}`
 }

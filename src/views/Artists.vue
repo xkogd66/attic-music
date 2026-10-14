@@ -488,7 +488,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
-import { searchAlbumCovers, searchArtistImages } from '../api/covers'
+import { searchAlbumCovers, searchArtistImages, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
 import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem  from '../components/TrackItem.vue'
@@ -890,7 +890,7 @@ async function openAlbum(album) {
     const data = await getAlbum(album.id)
     currentAlbum.value = { ...album, ...data.info }
     albumTracks.value  = data.tracks
-    albumDetailCoverSrc.value = coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id)
+    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id))
     view.value = 'album'
   } finally { loading.value = false }
 }
@@ -908,7 +908,7 @@ async function uploadAlbumCover(e) {
     `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
     file, 'cover.jpg',
     () => {
-      albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
+      albumDetailCoverSrc.value = sidecarAlbumCover(artist, album, currentAlbum.value?.id)
       albumDetailCoverState.value = 'sidecar'
     }
   )
@@ -926,7 +926,7 @@ async function chooseCover(c) {
     `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
     'cover.jpg',
     () => {
-      albumDetailCoverSrc.value = `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${Date.now()}`
+      albumDetailCoverSrc.value = sidecarAlbumCover(artist, album, currentAlbum.value?.id)
       albumDetailCoverState.value = 'sidecar'
     }
   )
