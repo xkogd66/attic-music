@@ -58,6 +58,17 @@ async function adminScan() {
   return { started: true };
 }
 
+// Discogs album ratings live in chat-server (it holds the Discogs token and the
+// shared store the app reads), reached through the public nginx proxy.
+const CHAT_API_URL = (process.env.CHAT_API_URL || "https://music.ekskog.me/chat-api").replace(/\/$/, "");
+
+async function chatApi(path, init) {
+  const res = await fetch(`${CHAT_API_URL}${path}`, init);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `chat-server ${path}: HTTP ${res.status}`);
+  return body;
+}
+
 const TOOLS = [
   {
     name: "ping",
@@ -130,6 +141,33 @@ const TOOLS = [
     },
     run: ({ name, songIds }) =>
       subsonic("createPlaylist", { name, songId: songIds }).then((r) => r.playlist),
+  },
+  {
+    name: "get_album_rating",
+    description:
+      "Get an album's Discogs community rating (vote-weighted average out of 5 over its most-collected releases, " +
+      "plus a per-release breakdown). Returns the stored value if the album was fetched before; otherwise fetches " +
+      "from Discogs and stores it, so the app shows it too. Discogs allows ~8 fresh albums per minute.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        artist: { type: "string", description: "Album artist" },
+        album: { type: "string", description: "Album title" },
+        force: { type: "boolean", description: "Re-fetch from Discogs even if already stored" },
+      },
+      required: ["artist", "album"],
+    },
+    run: ({ artist, album, force }) =>
+      chatApi(`/ratings?${new URLSearchParams({ artist, album, ...(force ? { force: "1" } : {}) })}`, { method: "POST" }),
+  },
+  {
+    name: "list_album_ratings",
+    description: "List every Discogs album rating stored so far (read-only; nothing is fetched from Discogs)",
+    inputSchema: { type: "object", properties: {} },
+    run: () =>
+      chatApi("/ratings").then((m) =>
+        Object.values(m).map(({ artist, album, rating, votes, url }) => ({ artist, album, rating, votes, url })),
+      ),
   },
   {
     name: "start_scan",

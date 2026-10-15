@@ -251,6 +251,35 @@
         </div>
       </section>
 
+      <!-- DISCOGS RATING -->
+      <section v-if="selected || selectedArtist" class="bg-white rounded-xl border border-stone-200 p-4">
+        <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Discogs rating</h2>
+        <div class="flex items-center gap-3 flex-wrap">
+          <button class="btn" :disabled="ratingBusy" @click="doRatings">
+            {{ ratingBusy ? 'Fetching…' : selectedArtist ? 'Fetch ratings for this artist' : 'Fetch rating' }}
+          </button>
+          <label class="text-xs text-stone-600 flex items-center gap-1.5 cursor-pointer">
+            <input v-model="ratingForce" type="checkbox" class="accent-amber-700" />
+            re-fetch even if already stored
+          </label>
+        </div>
+        <p class="text-xs text-stone-500 mt-2">
+          Vote-weighted average over the album's most-collected Discogs releases, stored on the server — each album is fetched once.
+          About 8 albums per minute (Discogs limit); an artist run stops on the limit and resumes where it left off when re-run.
+        </p>
+        <div v-if="ratingRows.length" class="mt-3 divide-y divide-stone-100">
+          <div v-for="row in ratingRows" :key="row.album" class="py-1.5 flex items-center gap-3 text-sm">
+            <span class="flex-1 min-w-0 truncate">{{ row.album }}</span>
+            <span v-if="row.state === 'queued'" class="text-xs text-stone-400">queued</span>
+            <span v-else-if="row.state === 'fetching'" class="text-xs text-stone-500">fetching…</span>
+            <span v-else-if="row.state === 'error'" class="text-xs text-red-600 text-right">{{ row.error }}</span>
+            <a v-else-if="row.rating" :href="row.url" target="_blank" rel="noopener" class="text-xs text-amber-700 hover:underline flex-shrink-0" :title="row.matched">
+              ★ {{ row.rating.toFixed(1) }} · {{ row.votes.toLocaleString() }} votes
+            </a>
+            <span v-else class="text-xs text-stone-500" :title="row.matched">no ratings on Discogs</span>
+          </div>
+        </div>
+      </section>
 
       <!-- RESULT -->
       <section v-if="result" class="bg-white rounded-xl border border-stone-200 p-4">
@@ -348,6 +377,7 @@ import {
   startAudit, startCleanup, startNormalizeCover, startReEmbedCover,
   startConvert, startEnrich, startEnrichLyrics, startRescan,
 } from '../api/maintenance'
+import { fetchRating } from '../api/chat'
 
 const config = useConfigStore()
 const jobsStore = useJobsStore()
@@ -541,6 +571,31 @@ function lyricsApply() {
   for (const t of ts) {
     launchJob(() => startEnrichLyrics(t.artist, t.album, { apply: true }), `Embed lyrics — ${t.album}`)
   }
+}
+
+// ── Discogs rating ───────────────────────────────────────────
+// Sequential on purpose: ~7 Discogs calls per album against a 60/min limit.
+// An error (rate limit, missing token) would hit every remaining album too, so
+// the loop stops there — already-stored albums are skipped on the next run.
+const ratingBusy  = ref(false)
+const ratingForce = ref(false)
+const ratingRows  = ref([])   // { artist, album, state, rating, votes, url, matched, error }
+
+async function doRatings() {
+  const ts = targets(); if (!ts.length) return
+  ratingBusy.value = true
+  ratingRows.value = ts.map(t => ({ ...t, state: 'queued' }))
+  for (const row of ratingRows.value) {
+    row.state = 'fetching'
+    try {
+      const r = await fetchRating(row.artist, row.album, ratingForce.value)
+      Object.assign(row, { state: 'done', rating: r.rating, votes: r.votes, url: r.url, matched: r.matched })
+    } catch (e) {
+      Object.assign(row, { state: 'error', error: e.message || String(e) })
+      break
+    }
+  }
+  ratingBusy.value = false
 }
 
 // ── sidecar folder index rescan ──────────────────────────────

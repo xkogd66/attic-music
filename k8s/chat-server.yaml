@@ -5,6 +5,10 @@ metadata:
   namespace: webapps
 spec:
   replicas: 1
+  # ReadWriteOnce volume (ratings.json): the old pod must release it before the
+  # new one starts, so no rolling update.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: chat-server
@@ -19,7 +23,18 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8090
+          volumeMounts:
+            - name: data
+              mountPath: /data
           env:
+            # Discogs personal access token — enables the discogs_rating tool and
+            # POST /ratings. Without it, stored ratings are still served.
+            - name: DISCOGS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: DISCOGS_TOKEN
+                  optional: true
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -72,6 +87,21 @@ spec:
                 secretKeyRef:
                   name: chat-server-secret
                   key: GONIC_PASSWORD
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: chat-server-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: chat-server-data
+  namespace: webapps
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Mi
 ---
 apiVersion: v1
 kind: Service

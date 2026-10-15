@@ -35,6 +35,12 @@ from-scratch replacement using plain Subsonic calls (token-based auth,
 | `create_playlist` | Create a playlist from a name + song ids     |
 | `start_scan`      | Trigger an incremental gonic library scan   |
 | `scan_status`      | Check if a scan is in progress, and current track count |
+| `get_album_rating` | Discogs community rating for an album (fetched once, stored by chat-server, shown in the app) |
+| `list_album_ratings` | Every stored Discogs rating (read-only) |
+
+The two rating tools go through chat-server at `CHAT_API_URL` (default
+`https://music.ekskog.me/chat-api`), not gonic — chat-server holds the Discogs
+token, so none is needed here.
 
 No streaming/playback, lyrics, or discovery tools — the Subsonic API doesn't
 give a natural-language client anything useful for those beyond what's

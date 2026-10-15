@@ -4,6 +4,7 @@
 // raw results plus Claude's short reply. Proxied by nginx at /chat-api/.
 import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
+import { readFileSync, writeFileSync, renameSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
 
 const PORT = process.env.PORT || 8090;
@@ -71,6 +72,95 @@ async function subsonic(endpoint, params = {}) {
   return r;
 }
 
+// ── Discogs album ratings ───────────────────────────────────────────────
+// Discogs rates releases (specific pressings), never albums, so an album's
+// rating is the vote-weighted mean over the most-collected releases of its
+// master. Fetched only on request and stored in RATINGS_FILE (a PVC), so each
+// album costs Discogs calls once. Shared by GET/POST /ratings and the
+// discogs_rating tool; the MCP server and the Tools page both go through here.
+const DISCOGS_TOKEN = process.env.DISCOGS_TOKEN;
+const RATINGS_FILE = `${process.env.DATA_DIR || "/data"}/ratings.json`;
+const TOP_RELEASES = 5; // ~7 Discogs calls per album; the limit is 60/min
+
+let ratings = {};
+try {
+  ratings = JSON.parse(readFileSync(RATINGS_FILE, "utf8"));
+} catch (err) {
+  // Refuse to start on a corrupt file rather than overwrite it on the next save.
+  if (err.code !== "ENOENT") {
+    console.error(`[ERROR] cannot read ${RATINGS_FILE}: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+// Mirrored in src/api/chat.js (ratingKey) — keep the two identical.
+const ratingKey = (artist, album) =>
+  [artist, album]
+    .map((s) => String(s).normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ""))
+    .join("|");
+
+async function discogs(path, params = {}) {
+  const res = await fetch(`https://api.discogs.com${path}?${new URLSearchParams(params)}`, {
+    headers: { Authorization: `Discogs token=${DISCOGS_TOKEN}`, "User-Agent": "attic-music/1.0" },
+  });
+  if (res.status === 429) throw new Error("Discogs rate limit hit (60 requests/min) — wait a minute and retry");
+  if (!res.ok) throw new Error(`Discogs ${path}: HTTP ${res.status}`);
+  return res.json();
+}
+
+async function fetchDiscogsRating(artist, album) {
+  const q = { artist, release_title: album, per_page: 1 };
+  let hit = (await discogs("/database/search", { ...q, type: "master" })).results?.[0];
+  const isMaster = !!hit;
+  // Plenty of releases have no master — rate the single release instead.
+  if (!hit) hit = (await discogs("/database/search", { ...q, type: "release" })).results?.[0];
+  if (!hit) return { rating: null, votes: 0, releases: [] };
+
+  let picked = [hit];
+  if (isMaster) {
+    const { versions = [] } = await discogs(`/masters/${hit.id}/versions`, { per_page: 100 });
+    const collected = (v) => v.stats?.community?.in_collection ?? 0;
+    picked = versions.sort((a, b) => collected(b) - collected(a)).slice(0, TOP_RELEASES);
+  }
+
+  const releases = [];
+  for (const v of picked) {
+    const r = (await discogs(`/releases/${v.id}/rating`)).rating;
+    if (!r?.count) continue;
+    releases.push({
+      id: v.id,
+      format: [].concat(v.format ?? v.major_formats ?? []).join(", "),
+      year: v.released || v.year || "",
+      country: v.country || "",
+      avg: r.average,
+      votes: r.count,
+    });
+  }
+
+  const votes = releases.reduce((n, r) => n + r.votes, 0);
+  const rating = votes ? Math.round((releases.reduce((n, r) => n + r.avg * r.votes, 0) / votes) * 100) / 100 : null;
+  return {
+    rating,
+    votes,
+    releases,
+    matched: hit.title,
+    url: `https://www.discogs.com/${isMaster ? "master" : "release"}/${hit.id}`,
+  };
+}
+
+// Returns the stored rating, fetching (and storing) only if missing or forced.
+// A null rating is stored too: "Discogs has no votes" is also fetched once.
+async function getRating(artist, album, force = false) {
+  const key = ratingKey(artist, album);
+  if (!force && ratings[key]) return ratings[key];
+  if (!DISCOGS_TOKEN) throw new Error("DISCOGS_TOKEN is not set");
+  const r = { artist, album, ...(await fetchDiscogsRating(artist, album)), fetchedAt: new Date().toISOString() };
+  ratings[key] = r;
+  writeFileSync(`${RATINGS_FILE}.tmp`, JSON.stringify(ratings));
+  renameSync(`${RATINGS_FILE}.tmp`, RATINGS_FILE);
+  return r;
+}
+
 const TOOLS = [
   {
     name: "search_music",
@@ -99,6 +189,24 @@ const TOOLS = [
       required: ["ids"],
     },
   },
+  ...(DISCOGS_TOKEN
+    ? [
+        {
+          name: "discogs_rating",
+          description:
+            "Get an album's Discogs community rating (average out of 5, vote count). Only call this when the user " +
+            "asks about ratings or reviews. Returns the stored value if this album was fetched before.",
+          input_schema: {
+            type: "object",
+            properties: {
+              artist: { type: "string", description: "Album artist" },
+              album: { type: "string", description: "Album title" },
+            },
+            required: ["artist", "album"],
+          },
+        },
+      ]
+    : []),
 ];
 
 const SYSTEM_PROMPT =
@@ -213,6 +321,15 @@ async function runChat(message, provider) {
         });
         continue;
       }
+      if (use.name === "discogs_rating") {
+        try {
+          const r = await getRating(use.input.artist, use.input.album);
+          toolResults.push({ type: "tool_result", tool_use_id: use.id, content: JSON.stringify(r) });
+        } catch (err) {
+          toolResults.push({ type: "tool_result", tool_use_id: use.id, content: err.message, is_error: true });
+        }
+        continue;
+      }
       try {
         const r = (await subsonic("search3", { query: use.input.query })).searchResult3 || {};
         for (const s of [].concat(r.song ?? [])) found.songs.set(s.id, s);
@@ -235,6 +352,25 @@ const server = createServer((req, res) => {
     const list = PROVIDERS.map((p) => ({ id: p.id, label: p.label || p.id }));
     res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(list));
     return;
+  }
+
+  const url = new URL(req.url, "http://localhost");
+  if (url.pathname === "/ratings") {
+    const json = (code, body) => res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(body));
+    if (req.method === "GET") return json(200, ratings);
+    if (req.method === "POST") {
+      const artist = url.searchParams.get("artist");
+      const album = url.searchParams.get("album");
+      if (!artist || !album) return json(400, { error: "artist and album are required" });
+      getRating(artist, album, url.searchParams.get("force") === "1").then(
+        (r) => json(200, r),
+        (err) => {
+          console.error(err);
+          json(502, { error: err.message });
+        },
+      );
+      return;
+    }
   }
 
   if (req.method !== "POST" || req.url !== "/chat") {

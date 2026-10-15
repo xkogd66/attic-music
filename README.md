@@ -376,6 +376,16 @@ Desktop and mobile split here deliberately:
 `webapps`, image `ghcr.io/xkogd66/chat-server:latest`, port 8090, env pulled
 from the `chat-server-secret` secret.
 
+**Discogs ratings.** `GET /ratings` returns every stored rating; `POST
+/ratings?artist=&album=[&force=1]` fetches one from Discogs and stores it in
+`/data/ratings.json` (PVC `chat-server-data`, so ratings survive restarts and
+are shared by every device). Discogs rates *releases*, not albums, so an album's
+rating is the vote-weighted mean over the 5 most-collected releases of its
+master (~7 API calls; limit 60/min). Fetches are explicit only — the Tools
+page ("Discogs rating") and the MCP `get_album_rating` tool; the album views
+just display what's stored. Needs `DISCOGS_TOKEN` in `chat-server-secret`; the
+`discogs_rating` LLM tool is only offered when it is set.
+
 `LLM_PROVIDERS` there lists four providers — Claude, **Ollama**, **Gemini**,
 **DeepSeek**. The last three are `kind: "openai"`, so they need no code
 change, only a `model` and a key; they still carry `REPLACE_ME` as the model
