@@ -243,6 +243,7 @@
               <div class="text-xs text-stone-600 mt-0.5 truncate">
                 {{ [album.year, album.songCount ? album.songCount + ' tracks' : '', album.genre].filter(Boolean).join(' · ') }}
               </div>
+              <div class="text-xs mt-0.5 truncate"><AlbumRating :album="album" bare /></div>
             </div>
           </div>
 
@@ -264,6 +265,7 @@
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
                 <div class="text-xs text-stone-600 mt-0.5 truncate">{{ album.albumArtist || album.artist }}</div>
+                <div class="text-xs mt-0.5 truncate"><AlbumRating :album="album" bare /></div>
               </div>
             </div>
           </div>
@@ -330,7 +332,9 @@
                 <span v-if="displayGenre">· {{ displayGenre }}</span>
               </div>
               <div class="font-serif text-3xl font-semibold mb-1.5">{{ displayTitle }}</div>
-              <div class="text-sm text-stone-600 mb-4">{{ displayArtist }}</div>
+              <div class="text-sm text-stone-600 mb-1">{{ displayArtist }}</div>
+              <AlbumRating :album="currentAlbum" full />
+              <div class="mb-3"></div>
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
@@ -493,6 +497,7 @@ import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem  from '../components/TrackItem.vue'
 import ArtistCard from '../components/ArtistCard.vue'
+import AlbumRating from '../components/AlbumRating.vue'
 
 const route  = useRoute()
 const router = useRouter()

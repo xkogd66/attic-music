@@ -84,7 +84,7 @@
             @click="goAlbum(album)"
           >
             <div class="truncate">{{ album.name }}</div>
-            <div class="text-xs text-stone-600 truncate">{{ album.artist }}</div>
+            <div class="text-xs text-stone-600 truncate">{{ album.artist }}<AlbumRating :album="album" /></div>
           </button>
         </template>
         <template v-if="results.songs.length">
@@ -133,6 +133,7 @@ import { usePlayerStore } from '../stores/player'
 import { search, startScan, getScanStatus } from '../api/subsonic'
 import RecentPlays from './RecentPlays.vue'
 import AskAiModal from './AskAiModal.vue'
+import AlbumRating from './AlbumRating.vue'
 import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw } from 'lucide-vue-next'
 
 const config = useConfigStore()

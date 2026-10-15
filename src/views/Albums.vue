@@ -101,7 +101,7 @@
                   </div>
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-                <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.artist }}<span v-if="ratingOf(album)?.rating" class="text-amber-700" :title="ratingTitle(ratingOf(album))"> · ★ {{ ratingOf(album).rating.toFixed(1) }}</span></div>
+                <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.artist }}<AlbumRating :album="album" /></div>
               </div>
             </div>
             <button
@@ -129,7 +129,7 @@
                 </div>
               </div>
               <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-              <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.albumArtist || album.artist }}<span v-if="ratingOf(album)?.rating" class="text-amber-700" :title="ratingTitle(ratingOf(album))"> · ★ {{ ratingOf(album).rating.toFixed(1) }}</span></div>
+              <div class="text-xs text-stone-600 truncate mt-0.5">{{ album.albumArtist || album.artist }}<AlbumRating :album="album" /></div>
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@
               </div>
               <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
               <div class="text-xs text-stone-600 truncate mt-0.5">
-                <button class="text-stone-600 hover:text-amber-700" @click.stop="openArtistByName(album.artist, $event)">{{ album.artist }}</button><span v-if="ratingOf(album)?.rating" class="text-amber-700" :title="ratingTitle(ratingOf(album))"> · ★ {{ ratingOf(album).rating.toFixed(1) }}</span>
+                <button class="text-stone-600 hover:text-amber-700" @click.stop="openArtistByName(album.artist, $event)">{{ album.artist }}</button><AlbumRating :album="album" />
               </div>
             </div>
           </div>
@@ -225,11 +225,7 @@
               <div class="text-xs uppercase tracking-widest text-stone-600 mb-1">
                 {{ ['Album', displayYear].filter(Boolean).join(' · ') }}<span v-if="displayGenre"> · {{ displayGenre }}</span>
               </div>
-              <div v-if="currentRating?.rating" class="text-xs text-stone-600 mb-1">
-                <a :href="currentRating.url" target="_blank" rel="noopener" class="hover:text-amber-700 transition-colors" :title="ratingTitle(currentRating)">
-                  <span class="text-amber-700">★ {{ currentRating.rating.toFixed(1) }}</span> · {{ currentRating.votes.toLocaleString() }} votes on Discogs
-                </a>
-              </div>
+              <AlbumRating :album="currentAlbum" full />
               <div class="font-serif text-xl font-semibold leading-tight mb-0.5">{{ displayTitle }}</div>
               <div class="text-sm text-stone-600 mb-3 truncate">
                 <button class="hover:text-amber-700 transition-colors" @click="openArtistByName(displayArtist, $event)">{{ displayArtist }}</button>
@@ -391,9 +387,9 @@ import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, get
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
 import { GENRES } from '../api/genres'
-import { fetchRatings, ratingKey } from '../api/chat'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem from '../components/TrackItem.vue'
+import AlbumRating from '../components/AlbumRating.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -413,15 +409,6 @@ const SORTS = [
 ]
 const sort = ref('alphabeticalByName')
 const currentAlbum = ref(null)
-
-// Discogs ratings are fetched from the Tools page, never here — this only
-// displays whatever is already stored.
-const ratings = ref({})
-const ratingOf = a => ratings.value[ratingKey(a.albumArtist || a.artist, a.name)]
-const currentRating = computed(() => currentAlbum.value && ratingOf(currentAlbum.value))
-const ratingTitle = r => r.releases
-  .map(x => `${[x.format, x.year, x.country].filter(Boolean).join(' · ')}: ${x.avg.toFixed(2)} (${x.votes})`)
-  .join('\n')
 const albumTracks  = ref([])
 const showLocation = ref(false)
 const albumDetailCoverSrc   = ref(null)
@@ -759,7 +746,6 @@ function closeAlbum() {
 }
 
 onMounted(async () => {
-  fetchRatings().then(r => { ratings.value = r })
   loadRecent()
   await loadAlbums()
   if (route.params.id) {

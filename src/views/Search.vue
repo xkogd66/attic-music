@@ -90,7 +90,7 @@
             @click="goAlbum(album)"
           >
             <div class="text-sm font-medium">{{ album.name }}</div>
-            <div class="text-xs text-stone-600 mt-0.5">{{ album.artist }}</div>
+            <div class="text-xs text-stone-600 mt-0.5">{{ album.artist }}<AlbumRating :album="album" /></div>
           </button>
         </template>
       </template>
@@ -111,6 +111,7 @@ import { search } from '../api/subsonic'
 import { askAI, fetchProviders } from '../api/chat'
 import { usePlayerStore } from '../stores/player'
 import TrackItem from '../components/TrackItem.vue'
+import AlbumRating from '../components/AlbumRating.vue'
 
 const router  = useRouter()
 const player  = usePlayerStore()

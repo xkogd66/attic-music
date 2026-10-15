@@ -61,7 +61,7 @@
                   <img loading="lazy" :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
+                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}<AlbumRating :album="album" /></div>
               </div>
             </div>
           </div>
@@ -109,7 +109,7 @@
                   <img loading="lazy" :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
+                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}<AlbumRating :album="album" /></div>
               </div>
             </div>
           </div>
@@ -131,7 +131,7 @@
                   <img loading="lazy" :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 </div>
                 <div class="text-xs font-medium truncate leading-tight">{{ album.name }}</div>
-                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}</div>
+                <div class="text-xs text-stone-600 truncate">{{ album.albumArtist || album.artist }}<AlbumRating :album="album" /></div>
               </div>
             </div>
           </div>
@@ -147,6 +147,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getArtists, getNewestAlbums, getRandomAlbums, coverUrl } from '../api/subsonic'
+import AlbumRating from '../components/AlbumRating.vue'
 
 const router = useRouter()
 

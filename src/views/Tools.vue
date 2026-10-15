@@ -378,6 +378,7 @@ import {
   startConvert, startEnrich, startEnrichLyrics, startRescan,
 } from '../api/maintenance'
 import { fetchRating } from '../api/chat'
+import { useRatingsStore } from '../stores/ratings'
 
 const config = useConfigStore()
 const jobsStore = useJobsStore()
@@ -596,6 +597,7 @@ async function doRatings() {
     }
   }
   ratingBusy.value = false
+  useRatingsStore().load(true) // so the album views pick the new ratings up without a reload
 }
 
 // ── sidecar folder index rescan ──────────────────────────────
