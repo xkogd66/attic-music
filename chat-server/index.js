@@ -366,7 +366,8 @@ const server = createServer((req, res) => {
         (r) => json(200, r),
         (err) => {
           console.error(err);
-          json(502, { error: err.message });
+          // Not 5xx: Cloudflare replaces 502 bodies with its own page, hiding err.message.
+          json(424, { error: err.message });
         },
       );
       return;

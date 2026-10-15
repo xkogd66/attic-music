@@ -25,7 +25,7 @@ export const ratingKey = (artist, album) =>
 // are decoration, never a reason to break the album view.
 export async function fetchRatings() {
   try {
-    const res = await fetch('/chat-api/ratings')
+    const res = await fetch('/chat-api/ratings', { cache: 'no-store' })
     return res.ok ? await res.json() : {}
   } catch { return {} }
 }
