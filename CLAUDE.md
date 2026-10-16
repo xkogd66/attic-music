@@ -35,9 +35,10 @@ applied. Apply it by hand in that case.
 
 It runs an LLM tool-calling loop over one tool (Subsonic `search3` against
 gonic) and serves `POST /chat` + `GET /providers`, proxied by nginx at
-`/chat-api/`. Providers are selectable per request by the user; the list is
-`LLM_PROVIDERS`, a JSON array in the deployment env, and the server refuses to
-start if a listed provider's key env var is missing. Two provider kinds:
+`/chat-api/`. The app is single-provider (DeepSeek) — the frontend never asks
+the user to choose, and the list comes from `LLM_PROVIDERS`, a JSON array in
+the deployment env. The server refuses to start if a listed provider's key env
+var is missing. Two provider kinds:
 `anthropic` (SDK) and `openai` (any OpenAI-compatible endpoint). Full details
 in the root [README.md](README.md#chat-server).
 

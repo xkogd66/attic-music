@@ -346,8 +346,7 @@ backend, not a product).
   /media/music`), an **NFS volume** (`192.168.1.8:/var/lib/media/music/mp3`),
   and a ClusterIP Service.
 - `chat-server.yaml` — Deployment + Service; env from the `chat-server-secret`
-  Secret; ships a 4-provider `LLM_PROVIDERS` example (Claude, Ollama, Gemini,
-  DeepSeek — the last three `kind:"openai"`).
+  Secret; ships a single-provider `LLM_PROVIDERS` (DeepSeek, `kind:"openai"`).
 - `chat-server-secret.example.yaml` — template for the secret. **⚠ It contains
   a committed-looking gonic password (`GONIC_PASSWORD: 7mileshi`)** — given the
   repo is public with CI, this is a real credential to rotate if it's live.

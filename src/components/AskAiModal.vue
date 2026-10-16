@@ -26,16 +26,6 @@
             class="flex-shrink-0 px-4 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
           >Ask</button>
         </form>
-
-        <div v-if="providers.length > 1" class="flex items-center gap-2 mt-2.5">
-          <span class="text-xs text-stone-600">Provider</span>
-          <select
-            v-model="provider"
-            class="text-xs px-2 py-1 rounded border border-stone-200 bg-stone-50 text-stone-600 focus:outline-none focus:border-amber-400"
-          >
-            <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.label }}</option>
-          </select>
-        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto">
@@ -72,7 +62,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { askAI, fetchProviders } from '../api/chat'
+import { askAI } from '../api/chat'
 import { usePlayerStore } from '../stores/player'
 import TrackItem from './TrackItem.vue'
 
@@ -85,12 +75,9 @@ const query     = ref('')
 const reply     = ref('')
 const songs     = ref([])
 const loading   = ref(false)
-const providers = ref([])
-const provider  = ref('')
 
-onMounted(async () => {
-  providers.value = await fetchProviders()
-  provider.value = providers.value[0]?.id || ''
+onMounted(() => {
+  inputEl.value?.focus()
 })
 
 // The prompt asks for plain prose, but models still emit **bold** — render it
@@ -115,7 +102,7 @@ async function onSubmit() {
   if (!query.value.trim()) return
   loading.value = true
   try {
-    const res = await askAI(query.value.trim(), provider.value)
+    const res = await askAI(query.value.trim())
     reply.value = res.reply || ''
     songs.value = res.songs || []
   } catch (err) {

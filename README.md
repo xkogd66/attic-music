@@ -356,18 +356,19 @@ can pick in the UI is one the server has already proved it can authenticate.
 | `GONIC_URL`, `GONIC_USERNAME`, `GONIC_PASSWORD` | — | Always required |
 | `PORT` | `8090` | |
 
-**Client.** `src/api/chat.js` exports `fetchProviders()` and `askAI(message,
-provider)`. Both callers load the list on mount, default to the first entry,
-and render a `<select>` only when more than one provider is configured, so a
-single-provider deployment shows no extra UI.
+**Client.** `src/api/chat.js` exports `askAI(message)`. The app is
+single-provider (DeepSeek): it never asks the user to choose, and the server
+falls back to its default (first) provider when no `provider` is named. To add
+a picker back, configure several entries in `LLM_PROVIDERS` and render the
+`/providers` list again.
 
 Desktop and mobile split here deliberately:
 
 - **Desktop** — Ask AI is separate from search. The sidebar's ✨ button opens
-  `AskAiModal.vue`, a centered overlay with its own input, provider picker and
-  full-width `TrackItem` rows. The sidebar search box is plain search only —
-  no AI mode, no toggle. The 224px column was too narrow to show a reply and
-  a track list at once.
+  `AskAiModal.vue`, a centered overlay with its own input and full-width
+  `TrackItem` rows. The sidebar search box is plain search only — no AI mode,
+  no toggle. The 224px column was too narrow to show a reply and a track list
+  at once.
 - **Mobile** — `Search.vue` keeps the inline ✨ toggle that flips the existing
   full-screen search view into AI mode. There is no sidebar to escape, so a
   modal would buy nothing.
@@ -386,13 +387,12 @@ page ("Discogs rating") and the MCP `get_album_rating` tool; the album views
 just display what's stored. Needs `DISCOGS_TOKEN` in `chat-server-secret`; the
 `discogs_rating` LLM tool is only offered when it is set.
 
-`LLM_PROVIDERS` there lists four providers — Claude, **Ollama**, **Gemini**,
-**DeepSeek**. The last three are `kind: "openai"`, so they need no code
-change, only a `model` and a key; they still carry `REPLACE_ME` as the model
-and will fail on use until that is set. Startup validation refuses to offer a
-provider it cannot authenticate, so every key in `LLM_PROVIDERS` must exist in
-the secret or the pod crashloops — drop a provider from the list rather than
-leaving its key blank.
+`LLM_PROVIDERS` there lists a single provider — **DeepSeek**
+(`kind: "openai"`, so no code change is needed, only a model and a key). With
+one entry the frontend shows no picker and every request uses this default.
+Startup validation refuses to offer a provider it cannot authenticate, so the
+listed provider's key (`DEEPSEEK_API_KEY`) must exist in the secret or the pod
+crashloops — drop a provider from the list rather than leaving its key blank.
 
 `k8s/chat-server-secret.example.yaml` is the template for that secret: copy it
 to `chat-server-secret.yaml`, fill it in, apply. **Never commit the filled
