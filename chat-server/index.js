@@ -109,11 +109,15 @@ async function discogs(path, params = {}) {
 }
 
 async function fetchDiscogsRating(artist, album) {
-  const q = { artist, release_title: album, per_page: 1 };
-  let hit = (await discogs("/database/search", { ...q, type: "master" })).results?.[0];
+  const q = { artist, release_title: album, per_page: 10 };
+  // The first hit can be a same-titled single (U2's "The Unforgettable Fire");
+  // the most-owned hit is the album.
+  const mostOwned = ({ results = [] }) =>
+    results.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0))[0];
+  let hit = mostOwned(await discogs("/database/search", { ...q, type: "master" }));
   const isMaster = !!hit;
   // Plenty of releases have no master — rate the single release instead.
-  if (!hit) hit = (await discogs("/database/search", { ...q, type: "release" })).results?.[0];
+  if (!hit) hit = mostOwned(await discogs("/database/search", { ...q, type: "release" }));
   if (!hit) return { rating: null, votes: 0, releases: [] };
 
   let picked = [hit];

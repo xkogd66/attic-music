@@ -1,5 +1,9 @@
 do not assume anything. don't brute force running commands. ask questions.
 
+before working on any feature, read `README.md` and `docs/ARCHITECTURE.md` —
+they document every feature and the files that implement it. find code from the
+docs, not from git history; never ask to run git to locate a feature's files.
+
 never compile or build anything to test or verify changes — not npm run build/dev/preview, not `go build`/`go vet`, not `docker build`, not any other compiler/linter invocation, including via a container (e.g. the artist-images `docker run golang:... go build` command documented below is for the user to run, not Claude). This applies to every language and every part of this repo. The user will build and test it themselves.
 
 kubectl commands are allowed against the homelab cluster (kubeconfig at
@@ -33,9 +37,10 @@ only `k8s/chat-server.yaml` — e.g. editing `LLM_PROVIDERS` — changes nothing
 in `chat-server/`, so the whole job is skipped and the config is never
 applied. Apply it by hand in that case.
 
-It runs an LLM tool-calling loop over one tool (Subsonic `search3` against
-gonic) and serves `POST /chat` + `GET /providers`, proxied by nginx at
-`/chat-api/`. The app is single-provider (DeepSeek) — the frontend never asks
+It runs an LLM tool-calling loop (Subsonic `search3` against gonic, plus
+`discogs_rating`) and serves `POST /chat` + `GET /providers`, proxied by nginx
+at `/chat-api/`. It also owns **Discogs album ratings** (`GET/POST /ratings`,
+stored in `/data/ratings.json` on a PVC) — see README "Discogs ratings". The app is single-provider (DeepSeek) — the frontend never asks
 the user to choose, and the list comes from `LLM_PROVIDERS`, a JSON array in
 the deployment env. The server refuses to start if a listed provider's key env
 var is missing. Two provider kinds:
