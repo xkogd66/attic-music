@@ -114,16 +114,24 @@ export async function getArtistCoverMap() {
 }
 
 // Returns { artistId: { genres: string[], years: number[] } } by scanning all albums.
-export async function getArtistGenreMap() {
+// Pages the whole album list (several sequential 500-album requests), so the
+// result is cached for the session and shared by concurrent callers; a failed
+// run is dropped so the next call retries.
+// ponytail: never invalidated — a reload refreshes it. Add a bust if tag edits
+// need the filters to update immediately.
+let genreMapPromise = null
+export function getArtistGenreMap() {
+  genreMapPromise ??= fetchArtistGenreMap().catch(e => { genreMapPromise = null; throw e })
+  return genreMapPromise
+}
+
+async function fetchArtistGenreMap() {
   const map = {}
   let offset = 0
   const size = 500
   while (true) {
-    let albums
-    try {
-      const data = await request('getAlbumList2', { type: 'alphabeticalByName', size, offset })
-      albums = ensureArray(data.albumList2?.album)
-    } catch { break }
+    const data   = await request('getAlbumList2', { type: 'alphabeticalByName', size, offset })
+    const albums = ensureArray(data.albumList2?.album)
     for (const album of albums) {
       if (!album.artistId) continue
       if (!map[album.artistId]) map[album.artistId] = { genres: [], years: [] }

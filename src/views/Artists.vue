@@ -169,7 +169,7 @@
       </div>
 
       <!-- ── MOBILE CONTENT ── -->
-      <div class="md:hidden flex-1 overflow-y-auto pb-40">
+      <div v-if="isMobile" class="md:hidden flex-1 overflow-y-auto pb-40">
         <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <template v-else>
           <div v-if="!mobileArtists.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">No artists found</div>
@@ -487,7 +487,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap } from '../api/subsonic'
@@ -507,6 +507,14 @@ const LETTERS = ['#', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'
 
 const view    = ref('grid')
 const loading = ref(false)
+
+// The mobile grid renders every artist's avatar. Merely hiding it with CSS on
+// desktop still made the browser fetch all of them, so mount it only below md.
+const mql      = window.matchMedia('(max-width: 767px)')
+const isMobile = ref(mql.matches)
+const onMqlChange = e => { isMobile.value = e.matches }
+mql.addEventListener('change', onMqlChange)
+onUnmounted(() => mql.removeEventListener('change', onMqlChange))
 
 const recentExpanded   = ref(false)
 const discoverExpanded = ref(false)
@@ -1009,8 +1017,9 @@ watch(() => route.params.id, (id) => {
 })
 
 onMounted(async () => {
-  getArtistGenreMap().then(m => { artistGenreMap.value = m })
   const [, newestAlbums] = await Promise.all([loadArtists(), getNewestAlbums(100)])
+  // After the grid is up, so its ~14 paged album requests don't compete with it.
+  getArtistGenreMap().then(m => { artistGenreMap.value = m }).catch(() => {}) // filters just stay empty
   const seen = new Set()
   const artists = []
   for (const album of newestAlbums) {
