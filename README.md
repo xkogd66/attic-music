@@ -139,6 +139,7 @@ src/
 │   │   └── cover.jpg
 
 ### Artist Images
+- **Artist avatars are stored as 150×150 JPEGs.** `/upload-avatar` centre-crops and scales down every upload (never up), and `POST /artist-images/resize-avatars` does the same to the existing library (preview by default; `?apply=1` overwrites the originals — no undo; re-runnable, skips files already done). The artists grid requests every avatar, so full-size files (100–840 KB) saturated the single Cloudflare tunnel and stalled audio/uploads/Home. Album covers are not resized.
 - All artist folders on the NFS share have a `cover.jpg` (pre-fetched externally)
 - Gonic does **not** populate `artist.coverArt` in `getArtists` — the field is always empty regardless of indexing
 - A dedicated Go sidecar (`artist-images/`) serves images directly from the NFS volume, bypassing the Subsonic API entirely
@@ -215,8 +216,12 @@ src/
 - Rows are `px-4 grid grid-cols-4 gap-2`; the views slice with `.slice(0, 4)`
 - All three rows are fed by the same three requests fired on mount — the carousels
   were replaced without adding an API call
-- Desktop keeps its original three swipe carousels, wrapped in `hidden md:block`;
-  the mobile rows are `md:hidden`. The two never render at the same time.
+- Desktop shows the same three rows as single-row grids (`auto-fill minmax(7.5rem,1fr)`
+  with `grid-auto-rows:0`, so only the first row is visible and nothing is cut off
+  at narrow widths), wrapped in `hidden md:block`; the mobile rows are `md:hidden`.
+  Keep those desktop rows free of bottom padding — collapsed rows overflow into it.
+- Desktop footer player (`Player.vue`): below `lg` the track info narrows and the
+  volume slider is hidden so Lyrics/Queue always fit
 - Carousels were dropped on mobile because they were never used — three visible
   items and a teasing sliver of a fourth, with everything else behind a swipe
 
@@ -236,6 +241,8 @@ src/
 - A single `mobileArtists` computed feeds one `grid-cols-4` grid: every artist,
   filtered by the search box and genre/year, in the chosen order
 - Avatars carry `loading="lazy"` — the grid can render the entire library at once
+- The mobile grid is mounted only when `isMobile` (`matchMedia('(max-width: 767px)')`) — a CSS-hidden copy on desktop still made the browser fetch every avatar. Don't revert it to a plain `md:hidden`.
+- `getArtistGenreMap()` is cached for the session (a reload refreshes it), and the view starts it only after the grid has loaded
 - **Gone on mobile**: the alphabetical contact list with letter-group headers, and the
   two browse carousels. Searching now filters the grid in place.
 - Desktop: unchanged — letter nav + genre/year filters + expandable letter groups + carousels

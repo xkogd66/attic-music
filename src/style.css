@@ -10,6 +10,12 @@
 @media (max-width: 767px) {
   input, select, textarea { font-size: 16px !important; }
 }
+/* Desktop sizes the app from its parent, not the viewport: in a macOS web-app
+   window 100dvh also counted the title bar, pushing the footer player ~25px off
+   the bottom. Mobile keeps 100dvh (see the iOS rules in the README). */
+@media (min-width: 768px) {
+  html, body, #app { height: 100%; }
+}
 /* All-white covers vanish against the white background — give every image a
    hairline. border-radius: inherit so the border follows rounded wrappers
    instead of being clipped off at the corners. */

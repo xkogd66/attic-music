@@ -115,10 +115,10 @@
         <!-- DISCOVER (desktop) -->
         <div v-if="discoverAlbums.length" class="hidden md:block px-4 pt-5 pb-4 border-b border-stone-100">
           <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover</div>
-          <div class="w-full flex gap-3 md:gap-4 overflow-x-auto" style="scrollbar-width:none;-ms-overflow-style:none">
+          <div class="grid gap-x-3 md:gap-x-4 overflow-hidden" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); grid-template-rows: auto; grid-auto-rows: 0">
             <div
               v-for="album in discoverAlbums" :key="album.id"
-              class="flex-shrink-0 cursor-pointer group [width:28%] md:w-[100px]"
+              class="min-w-0 cursor-pointer group"
               @click="openAlbum(album)"
             >
               <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">

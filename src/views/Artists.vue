@@ -250,10 +250,10 @@
           <!-- Albums this artist only appears on (compilations, tributes, ...) -->
           <div v-if="appearsOnAlbums.length" class="mt-8">
             <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">also appears on...</div>
-            <div class="w-full flex gap-3 overflow-x-auto pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+            <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(88px, 1fr))">
               <div
                 v-for="album in appearsOnAlbums" :key="album.id"
-                class="flex-none cursor-pointer w-[88px] group"
+                class="min-w-0 cursor-pointer group"
                 @click="openAlbum(album)"
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">

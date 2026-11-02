@@ -1,5 +1,5 @@
 <template>
-  <aside class="w-56 bg-white border-r border-stone-200 flex flex-col h-screen flex-shrink-0">
+  <aside class="w-56 bg-white border-r border-stone-200 flex flex-col h-full flex-shrink-0">
 
     <!-- HEADER -->
     <div class="px-6 py-7 border-b border-stone-200 flex-shrink-0">

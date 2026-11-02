@@ -96,7 +96,9 @@ Auth-guarded SPA routes:
   (parses the `subsonic-response` envelope, throws on non-`ok`). Exposes:
   `ping`, `getIndexes`, `getDirectory`, `getArtists` (alphabetized, grouped by
   letter, article-stripping via `sortableName`), `getArtistCoverMap`,
-  `getArtistGenreMap` (paginates all albums in 500s), `getArtist`, `getAlbum`,
+  `getArtistGenreMap` (paginates all albums in 500s; **cached as a promise for
+  the session**, and a failed page throws instead of caching a partial map),
+  `getArtist`, `getAlbum`,
   `getAlbumPage`/`getNewestAlbums`/`getRandomAlbums` (wrap `getAlbumList2`),
   playlist CRUD, `getArtistInfo2`, `scrobble`, `startScan`/`getScanStatus`,
   `search` (`search3`), plus URL builders `coverUrl`/`streamUrl`.
@@ -141,13 +143,19 @@ Auth-guarded SPA routes:
 
 ### 3.6 Views
 
-- **Home.vue** — carousels (desktop) / compact grids (mobile): "Recently Added"
-  artists (first 20 distinct artists from newest 100 albums), "Discover
-  Artists" (20 random), "Discover Albums" (20 random, 4 on mobile).
+- **Home.vue** — one-row grids (desktop) / compact grids (mobile): "Recently
+  Added" artists (first 20 distinct artists from newest 100 albums), "Discover
+  Artists" (20 random), "Discover Albums" (20 random, 4 on mobile). The desktop
+  rows are `auto-fill minmax(7.5rem,1fr)` grids with `grid-auto-rows:0` so only
+  the first row shows and nothing is cut off at narrow widths (they used to be
+  fixed-width sideways carousels). No bottom padding on those rows — a collapsed
+  row's items overflow into any padding and show through.
 - **Artists.vue** (~1000 lines — the most complex view):
   - Desktop: letter-nav bar, expandable letter-group grids of `ArtistCard`s,
     genre/year filter dropdowns, two browse carousels.
-  - Mobile: one `grid-cols-4` of **every** artist (lazy-loaded circular
+  - Mobile (mounted only when `isMobile`, a `matchMedia('(max-width:767px)')`
+    ref — a CSS-hidden copy still made the browser fetch ~4,600 avatars on
+    desktop): one `grid-cols-4` of **every** artist (lazy-loaded circular
     avatars), search box + genre/year dropdowns, sort chips **A–Z / Added /
     Discover** — all three sorts are client-side over the full in-memory index
     (server only offers alphabetical): "Added" uses a rank Map from the
@@ -196,7 +204,9 @@ Auth-guarded SPA routes:
 
 ### 3.7 Components
 
-- **`Player.vue`** (desktop footer, `hidden md:flex`) — track info + cover,
+- **`Player.vue`** (desktop footer, `hidden md:flex`; below `lg` the track info
+  narrows to `w-44`, padding/gaps shrink and the volume slider is hidden so
+  Lyrics/Queue always fit) — track info + cover,
   shuffle/repeat/prev/play/next, click-to-seek progress bar, volume slider +
   mute, and a Queue panel / **Lyrics panel** (mutually exclusive; lyrics
   auto-center the active line via `scrollIntoView`). Also a "Save as playlist"
@@ -262,6 +272,13 @@ write ID3 tags.
     **embeds the cover into every MP3's ID3 APIC frame** via `id3v2`,
     fire-and-forget).
   - `POST /upload-avatar?name=` — same, but into the artist dir (no embedding).
+    The image is run through `squareJPEG`: centre-cropped to a square and scaled
+    **down** to 150×150 (never up), so every avatar on disk is small.
+  - `POST /resize-avatars[?apply=1]` — async job (see item 7 in §10) that does
+    the same to every existing artist `cover.jpg`. Without `apply=1` it only
+    reports what would change. Skips files already square and ≤150px, so it is
+    safe to re-run; writes via temp file + rename. **Overwrites originals — no
+    undo.** Album covers are untouched.
   - `POST /album-tags?artist=&album=` — writes `TALB`/`TPE1`/`TPE2`/`TCON`/
     `TDRC`+`TYER` to every `.mp3` in the album dir.
   - `POST /track-tags?artist=&album=` — writes `TIT2`/`TPE1`/`TRCK` to one file
@@ -569,3 +586,35 @@ level.
      `docker run golang:1.22-bookworm ...` command (see artist-images/
      section above) — that step is for the user to run, not Claude.
 
+
+9. **Slow PWA investigation (2026-11-02) — what was found, what was fixed.**
+   Symptoms: an avatar upload took >3 min, music stopped for ~30s, Home sat on
+   "Loading…" for over a minute, Home avatars took >10 min to appear.
+   - **Cause (proven from logs):** the Artists view rendered the mobile grid
+     (every artist) even on desktop, and the sidecar served full-size
+     `cover.jpg` files (100–840 KB each). nginx logged ~6,700 avatar requests /
+     ~800 MB in ~6 minutes from one Safari client, plus ~2,250 "buffered to a
+     temporary file" warnings. Everything shares **one cloudflared pod / one
+     tunnel**, so audio (`/rest/stream`), uploads and API calls queued behind
+     the images; cloudflared logged `stream … canceled by remote` on
+     `/rest/stream`.
+   - **Fixed:** avatars stored at 150×150 (upload + `/resize-avatars`, §4); the
+     mobile grid no longer mounts on desktop; `getArtistGenreMap()` is cached,
+     fails loudly instead of caching a partial map, and starts after the grid
+     loads.
+   - **Not fixed / unverified:** why `loading="lazy"` didn't throttle the hidden
+     grid in Safari (the fix sidesteps it); Home still blocks on
+     `getArtists()` + `getNewestAlbums(100)` + `getRandomAlbums(20)` together;
+     gonic (`192.168.1.8:4747`, outside the cluster) was seen returning
+     `unexpected EOF` on `getAlbumList2?size=500` — its own latency was never
+     measured; other pages' narrow-desktop layout was reported but not
+     diagnosed.
+   - **After deploying the sidecar**, run `POST /artist-images/resize-avatars`
+     (preview), then `?apply=1`. Back up first if any originals matter.
+   - **Follow-up layout fixes (same day):** the artist page's "Also appears on…"
+     row is a wrapping grid (was a clipped sideways strip); Albums' Discover row
+     is a one-row grid like Home's (its Recently Added carousel keeps its ‹ ›
+     arrows). Desktop (`md+`) now sizes the app from `html/body/#app {height:100%}`
+     and `SideBar` uses `h-full`, instead of `100dvh`/`h-screen` — in a macOS
+     web-app window the footer player was cropped ~25px off the bottom, probably
+     because 100dvh counted the title bar (**unverified**; mobile keeps 100dvh).
