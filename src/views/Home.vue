@@ -14,10 +14,10 @@
           <!-- Recently Added Artists -->
           <div v-if="recentArtists.length" class="pt-5 mb-6">
             <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
-            <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+            <div class="grid gap-x-3 px-4 pb-1 overflow-hidden" style="grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));grid-template-rows:auto;grid-auto-rows:0">
               <div
                 v-for="artist in recentArtists" :key="artist.id"
-                class="flex-none cursor-pointer w-36"
+                class="min-w-0 cursor-pointer"
                 @click="goToArtist(artist)"
               >
                 <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
@@ -32,10 +32,10 @@
           <!-- Discover Artists -->
           <div v-if="discoverArtists.length" class="mb-6">
             <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Artists</div>
-            <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+            <div class="grid gap-x-3 px-4 pb-1 overflow-hidden" style="grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));grid-template-rows:auto;grid-auto-rows:0">
               <div
                 v-for="artist in discoverArtists" :key="artist.id"
-                class="flex-none cursor-pointer w-36"
+                class="min-w-0 cursor-pointer"
                 @click="goToArtist(artist)"
               >
                 <div class="aspect-square bg-stone-100 rounded-full overflow-hidden mb-1.5 relative">
@@ -50,10 +50,10 @@
           <!-- Discover Albums -->
           <div v-if="discoverAlbums.length" class="mb-6">
             <div class="px-4 text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover Albums</div>
-            <div class="w-full flex gap-3 overflow-x-auto px-4 pb-1" style="scrollbar-width:none;-ms-overflow-style:none">
+            <div class="grid gap-x-3 px-4 pb-1 overflow-hidden" style="grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));grid-template-rows:auto;grid-auto-rows:0">
               <div
                 v-for="album in discoverAlbums" :key="album.id"
-                class="flex-none cursor-pointer w-36"
+                class="min-w-0 cursor-pointer"
                 @click="goToAlbum(album)"
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">

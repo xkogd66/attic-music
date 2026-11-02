@@ -1,9 +1,9 @@
 <template>
   <!-- DESKTOP PLAYER -->
-  <footer class="hidden md:flex h-20 bg-white border-t border-stone-200 items-center px-6 gap-6 z-50 flex-shrink-0">
+  <footer class="hidden md:flex h-20 bg-white border-t border-stone-200 items-center px-4 lg:px-6 gap-3 lg:gap-6 z-50 flex-shrink-0">
 
     <!-- TRACK INFO -->
-    <div class="flex items-center gap-3 w-60 flex-shrink-0 overflow-hidden">
+    <div class="flex items-center gap-3 w-44 lg:w-60 flex-shrink-0 overflow-hidden">
       <div class="w-11 h-11 bg-amber-50 flex-shrink-0 overflow-hidden flex items-center justify-center text-xl rounded">
         <img v-if="player.currentTrack?.coverArt" :src="coverUrl(player.currentTrack.coverArt)" class="w-full h-full object-cover" @error="onImgError" />
         <span v-else>🎵</span>
@@ -18,8 +18,8 @@
     </div>
 
     <!-- CONTROLS -->
-    <div class="flex-1 flex flex-col items-center gap-1.5">
-      <div class="flex items-center gap-4">
+    <div class="flex-1 min-w-0 flex flex-col items-center gap-1.5">
+      <div class="flex items-center gap-3 lg:gap-4">
         <div class="flex flex-col items-center gap-0.5">
           <button class="ctrl" :class="{ 'text-amber-700': player.shuffle }" @click="player.shuffle = !player.shuffle">
             <Shuffle :size="16" />
@@ -69,7 +69,7 @@
         type="range" min="0" max="1" step="0.01"
         :value="player.volume"
         @input="player.setVolume(+$event.target.value)"
-        class="w-20 cursor-pointer [accent-color:var(--accent)]"
+        class="hidden lg:block w-20 cursor-pointer [accent-color:var(--accent)]"
       />
       <button
         class="text-xs border border-stone-200 px-2.5 py-1.5 rounded text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-all"
