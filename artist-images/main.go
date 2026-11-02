@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	_ "image/gif"
 	"image/jpeg"
+	_ "image/png"
 	"io"
 	"log"
 	"net/http"
@@ -21,6 +23,7 @@ import (
 	"time"
 
 	"github.com/bogem/id3v2/v2"
+	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp"
 )
 
@@ -151,6 +154,92 @@ func toJPEG(img []byte) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// Avatars are shown at ≤120px but originals run 100–800KB, and the artists grid
+// pulls the whole library. So artist avatars are stored as avatarSize×avatarSize
+// JPEGs: squareJPEG centre-crops (the UI crops to a circle anyway) and scales
+// down — never up, so a smaller source stays square at its own size. Used on
+// upload and by the /resize-avatars job for the existing library.
+const avatarSize = 150
+
+func squareJPEG(img []byte) ([]byte, error) {
+	src, _, err := image.Decode(bytes.NewReader(img))
+	if err != nil {
+		return nil, err
+	}
+	b := src.Bounds()
+	side := b.Dx()
+	if b.Dy() < side {
+		side = b.Dy()
+	}
+	crop := image.Rect(b.Min.X+(b.Dx()-side)/2, b.Min.Y+(b.Dy()-side)/2, 0, 0)
+	crop.Max = image.Pt(crop.Min.X+side, crop.Min.Y+side)
+	out := side
+	if out > avatarSize {
+		out = avatarSize
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, out, out))
+	draw.ApproxBiLinear.Scale(dst, dst.Bounds(), src, crop, draw.Src, nil)
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 88}); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// resizeAvatars rewrites every artist cover.jpg as a square ≤avatarSize JPEG.
+// Files already in that shape are skipped, so it is safe to re-run. Without
+// apply it only counts what would change. Writes go via a temp file + rename so
+// a failure never leaves a half-written avatar.
+func resizeAvatars(apply bool, j *job) []change {
+	seen := map[string]bool{}
+	var paths []string
+	for _, p := range coverMap {
+		if !seen[p] {
+			seen[p] = true
+			paths = append(paths, p)
+		}
+	}
+	sort.Strings(paths)
+	var changes []change
+	failed := 0
+	for i, p := range paths {
+		j.setProgress(i+1, len(paths))
+		j.setMessage("checking " + filepath.Base(filepath.Dir(p)))
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			failed++
+			continue
+		}
+		cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+		if err == nil && cfg.Width == cfg.Height && cfg.Width <= avatarSize {
+			continue
+		}
+		out, err := squareJPEG(raw)
+		if err != nil {
+			log.Printf("resize-avatars: %s: %v", p, err)
+			failed++
+			continue
+		}
+		if apply {
+			tmp := p + ".tmp"
+			if err := os.WriteFile(tmp, out, 0644); err != nil {
+				log.Printf("resize-avatars: write %s: %v", tmp, err)
+				failed++
+				continue
+			}
+			if err := os.Rename(tmp, p); err != nil {
+				os.Remove(tmp)
+				log.Printf("resize-avatars: rename %s: %v", p, err)
+				failed++
+				continue
+			}
+		}
+		changes = append(changes, change{File: p, Detail: fmt.Sprintf("%dx%d %dKB → %dKB", cfg.Width, cfg.Height, len(raw)/1024, len(out)/1024)})
+	}
+	log.Printf("resize-avatars: %d of %d need resizing (apply=%v, %d failed)", len(changes), len(paths), apply, failed)
+	return changes
 }
 
 // embedCover writes img as the front-cover APIC frame of every .mp3 in dir,
@@ -1287,7 +1376,7 @@ func main() {
 			http.Error(w, "failed to read file", http.StatusBadRequest)
 			return
 		}
-		img, err = toJPEG(img)
+		img, err = squareJPEG(img)
 		if err != nil {
 			log.Printf("upload-avatar: cannot decode image for %q: %v", name, err)
 			http.Error(w, "unsupported image format", http.StatusBadRequest)
@@ -1550,6 +1639,21 @@ func main() {
 				return
 			}
 			j.done(changes, nil)
+		})
+		writeJobAccepted(w, id)
+	})
+
+	// POST /resize-avatars[?apply=1] → shrinks every artist cover.jpg to a square
+	// ≤150px. Without apply=1 it only reports what would change. Overwrites the
+	// originals, so there is no undo.
+	http.HandleFunc("/resize-avatars", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		apply := r.FormValue("apply") == "1"
+		id := startJob("resize-avatars", apply, "", func(j *job) {
+			j.done(resizeAvatars(apply, j), nil)
 		})
 		writeJobAccepted(w, id)
 	})
