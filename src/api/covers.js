@@ -146,17 +146,17 @@ const replacedCovers = new Map()
 // mid-embed; the manual rescan in the sidebar covers that.
 const EMBED_SETTLE_MS = 6000
 
-export function sidecarAlbumCover(artist, album, id) {
+export function sidecarAlbumCover(artist, album, id, dir) {
   const t = Date.now()
   if (id) replacedCovers.set(id, t)
   setTimeout(() => startScan().catch(() => {}), EMBED_SETTLE_MS)
-  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&t=${t}`
+  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(dir)}&t=${t}`
 }
 
 // The detail-page cover: the freshly uploaded one if there is one, else gonic's.
-export function detailCoverSrc(album, gonicUrl) {
+export function detailCoverSrc(album, gonicUrl, dir) {
   const t = replacedCovers.get(album.id)
   if (!t) return gonicUrl
   const artist = album.albumArtist || album.artist
-  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album.name)}&t=${t}`
+  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album.name)}&dir=${encodeURIComponent(dir)}&t=${t}`
 }

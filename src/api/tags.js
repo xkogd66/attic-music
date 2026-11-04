@@ -9,9 +9,10 @@
 //   albumArtist → TPE2
 //   year        → TDRC/TYER
 //   genre       → TCON
-// `dirArtist`/`dirAlbum` must match the album's CURRENT on-disk identity
-// (album artist + album name) so the sidecar finds the folder.
-export async function saveAlbumTags(dirArtist, dirAlbum, { title, artist, albumArtist, year, genre } = {}) {
+// `dir` is the album folder relative to the music root (from gonic's track
+// path); the sidecar uses it directly. `dirArtist`/`dirAlbum` are the fallback
+// name lookup, used only when `dir` is empty.
+export async function saveAlbumTags(dirArtist, dirAlbum, dir, { title, artist, albumArtist, year, genre } = {}) {
   const form = new FormData()
   if (title)       form.append('title', title)
   if (artist)      form.append('artist', artist)
@@ -19,7 +20,7 @@ export async function saveAlbumTags(dirArtist, dirAlbum, { title, artist, albumA
   if (year)        form.append('year', String(year))
   if (genre)       form.append('genre', genre)
   const res = await fetch(
-    `/artist-images/album-tags?artist=${encodeURIComponent(dirArtist)}&album=${encodeURIComponent(dirAlbum)}`,
+    `/artist-images/album-tags?artist=${encodeURIComponent(dirArtist)}&album=${encodeURIComponent(dirAlbum)}&dir=${encodeURIComponent(dir)}`,
     { method: 'POST', body: form }
   )
   if (!res.ok) throw new Error(`album-tags failed: ${res.status}`)
@@ -27,14 +28,14 @@ export async function saveAlbumTags(dirArtist, dirAlbum, { title, artist, albumA
 
 // Writes track-level frames (title, artist, track number) to a single file.
 // `file` is the track's filename (basename of the Subsonic song path).
-export async function saveTrackTags(artist, album, file, { title, artist: trackArtist, track } = {}) {
+export async function saveTrackTags(artist, album, dir, file, { title, artist: trackArtist, track } = {}) {
   const form = new FormData()
   form.append('file', file)
   if (title)       form.append('title', title)
   if (trackArtist) form.append('artist', trackArtist)
   if (track)       form.append('track', String(track))
   const res = await fetch(
-    `/artist-images/track-tags?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+    `/artist-images/track-tags?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(dir)}`,
     { method: 'POST', body: form }
   )
   if (!res.ok) throw new Error(`track-tags failed: ${res.status}`)

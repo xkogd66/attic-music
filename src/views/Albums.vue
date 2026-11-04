@@ -516,7 +516,7 @@ async function saveTagEdits() {
   tagSaveError.value = ''
   tagSaving.value = true
   try {
-    await saveAlbumTags(diskArtist, diskAlbum, {
+    await saveAlbumTags(diskArtist, diskAlbum, albumPath.value, {
       title:       title       || undefined,
       artist:      artist      || undefined,
       albumArtist: albumArtist || undefined,
@@ -571,7 +571,7 @@ async function saveTrackEdits() {
   trackSaveError.value = ''
   trackSaving.value = true
   try {
-    await saveTrackTags(diskArtist, diskAlbum, file, {
+    await saveTrackTags(diskArtist, diskAlbum, albumPath.value, file, {
       title:  title  || undefined,
       artist: artist || undefined,
       track:  num    || undefined,
@@ -704,7 +704,7 @@ async function openAlbum(album) {
     const data = await getAlbum(album.id)
     currentAlbum.value = { ...album, ...data.info }
     albumTracks.value  = data.tracks
-    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id))
+    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id), albumPath.value)
   } finally { loading.value = false }
 }
 
@@ -768,7 +768,7 @@ async function openAlbumById(id) {
     const data = await getAlbum(id)
     currentAlbum.value = data.info
     albumTracks.value  = data.tracks
-    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id))
+    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id), albumPath.value)
   } finally { loading.value = false }
 }
 
@@ -782,10 +782,10 @@ async function uploadAlbumCover(e) {
   const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
   const album  = currentAlbum.value.name
   await uploadCover(
-    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(albumPath.value)}`,
     file, 'cover.jpg',
     () => {
-      albumDetailCoverSrc.value = sidecarAlbumCover(artist, album, currentAlbum.value?.id)
+      albumDetailCoverSrc.value = sidecarAlbumCover(artist, album, currentAlbum.value?.id, albumPath.value)
       albumDetailCoverState.value = 'sidecar'
     }
   )
@@ -800,10 +800,10 @@ async function chooseCover(c) {
   const album  = currentAlbum.value.name
   await uploadCoverFromUrl(
     c.url,
-    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
+    `/artist-images/upload?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(albumPath.value)}`,
     'cover.jpg',
     () => {
-      albumDetailCoverSrc.value = sidecarAlbumCover(artist, album, currentAlbum.value?.id)
+      albumDetailCoverSrc.value = sidecarAlbumCover(artist, album, currentAlbum.value?.id, albumPath.value)
       albumDetailCoverState.value = 'sidecar'
     }
   )

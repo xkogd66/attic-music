@@ -30,6 +30,7 @@ import (
 var coverMap      = map[string]string{}
 var albumCoverMap = map[string]string{}
 var albumDirMap   = map[string]string{}
+var musicRoot     string
 var artistDirMap  = map[string]string{}
 var nonAlnum   = regexp.MustCompile(`[^a-z0-9]+`)
 var yearPrefix = regexp.MustCompile(`^\d{4}-`)
@@ -336,6 +337,20 @@ func albumDirOf(artist, album string) (string, bool) {
 	key := normalize(artist) + "|" + normalize(album)
 	dir, ok := albumDirMap[key]
 	return dir, ok
+}
+
+// albumDirFor finds the album folder for a request. ?dir= is the folder path
+// relative to the music root, as gonic reports it; when sent it is used as-is,
+// because guessing the folder from tag names fails whenever tags and folder
+// name disagree. Without it, falls back to the normalized name lookup.
+func albumDirFor(r *http.Request, artist, album string) (string, bool) {
+	if rel := r.URL.Query().Get("dir"); rel != "" {
+		// Clean("/"+rel) drops any ".." so the result stays inside musicRoot.
+		dir := filepath.Join(musicRoot, filepath.Clean("/"+rel))
+		fi, err := os.Stat(dir)
+		return dir, err == nil && fi.IsDir()
+	}
+	return albumDirOf(artist, album)
 }
 
 // letterOfDir returns the top-level ./mp3/<letter>/ component of an album
@@ -1229,6 +1244,7 @@ func main() {
 	if root == "" {
 		root = "/media/music"
 	}
+	musicRoot = root
 	logRequests = strings.ToLower(os.Getenv("LOG_REQUESTS")) == "true"
 	buildMap(root)
 	if len(coverMap) == 0 {
@@ -1254,6 +1270,12 @@ func main() {
 		}
 		key  := normalize(artist) + "|" + normalize(album)
 		path, ok := albumCoverMap[key]
+		if r.URL.Query().Get("dir") != "" {
+			dir, found := albumDirFor(r, artist, album)
+			path = filepath.Join(dir, "cover.jpg")
+			_, err := os.Stat(path)
+			ok = found && err == nil
+		}
 		if !ok {
 			if logRequests {
 				log.Printf("MISS  album %q / %q (%.0fms)", artist, album, float64(time.Since(start).Microseconds())/1000)
@@ -1302,7 +1324,7 @@ func main() {
 			return
 		}
 		key := normalize(artist) + "|" + normalize(album)
-		dir, ok := albumDirMap[key]
+		dir, ok := albumDirFor(r, artist, album)
 		if !ok {
 			http.Error(w, "album directory not found", http.StatusNotFound)
 			return
@@ -1408,7 +1430,7 @@ func main() {
 			return
 		}
 		key := normalize(artist) + "|" + normalize(album)
-		dir, ok := albumDirMap[key]
+		dir, ok := albumDirFor(r, artist, album)
 		if !ok {
 			log.Printf("album-tags: no dir for key %q (artist=%q album=%q)", key, artist, album)
 			http.Error(w, "album directory not found", http.StatusNotFound)
@@ -1478,7 +1500,7 @@ func main() {
 			return
 		}
 		key := normalize(artist) + "|" + normalize(album)
-		dir, ok := albumDirMap[key]
+		dir, ok := albumDirFor(r, artist, album)
 		if !ok {
 			log.Printf("track-tags: no dir for key %q (artist=%q album=%q)", key, artist, album)
 			http.Error(w, "album directory not found", http.StatusNotFound)
