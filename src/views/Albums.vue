@@ -79,7 +79,7 @@
       <div class="flex-1 min-h-0 overflow-y-auto pb-40 md:pb-24">
 
         <!-- RECENTLY ADDED CAROUSEL (desktop) -->
-        <div v-if="recentAlbums.length" class="hidden md:block px-4 pt-5 pb-4 border-b border-stone-100">
+        <div v-if="recentAlbums.length && !ui.minimal" class="hidden md:block px-4 pt-5 pb-4 border-b border-stone-100">
           <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Recently Added</div>
           <div class="relative">
             <button
@@ -113,7 +113,7 @@
         </div>
 
         <!-- DISCOVER (desktop) -->
-        <div v-if="discoverAlbums.length" class="hidden md:block px-4 pt-5 pb-4 border-b border-stone-100">
+        <div v-if="discoverAlbums.length && !ui.minimal" class="hidden md:block px-4 pt-5 pb-4 border-b border-stone-100">
           <div class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-3">Discover</div>
           <div class="grid gap-x-3 md:gap-x-4 overflow-hidden" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); grid-template-rows: auto; grid-auto-rows: 0">
             <div
@@ -383,6 +383,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
+import { useUiStore } from '../stores/ui'
 import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, getArtists } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
@@ -394,6 +395,7 @@ import AlbumRating from '../components/AlbumRating.vue'
 const route  = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
+const ui     = useUiStore()
 
 
 const loading        = ref(false)

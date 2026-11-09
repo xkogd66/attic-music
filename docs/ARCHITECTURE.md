@@ -139,6 +139,12 @@ Auth-guarded SPA routes:
     `jumpToQueue`, `seek`, `setVolume`, `toggleMute`, `fmt`.
 - **`playlist`** — caches the playlist list (`load()` once on first use) and
   `addTrack(playlistId, trackId)`.
+- **`ui`** (`src/stores/ui.js`) — desktop presentation prefs, currently just
+  `minimal` (**minimal/"zen" mode**) persisted to `localStorage.attic_ui_minimal`
+  via `setMinimal()`/`toggleMinimal()`. Read by `SideBar` (icon rail),
+  `Player` (compact strip), and `Home`/`Albums` (carousels). Mobile ignores it —
+  every affected element is already desktop-only (`md:`), and the mobile
+  `MiniPlayer`/`FullPlayer`/`BottomNav` path never consults it.
 
 
 ### 3.6 Views
@@ -191,9 +197,16 @@ Auth-guarded SPA routes:
     `albumDetailCoverState` (`loading → sidecar → failed` → "Add cover"
     button), album tag editing, track tag editing, cover search/upload (same
     machinery as Artists.vue).
-  - **`albumDiskIdentity()`** — the on-disk folder (album-artist + album name)
-    is what the sidecar uses to find the folder; it *doesn't* change when tags
-    are edited, and a `_diskArtist`/`_diskAlbum` local override can be recorded.
+  - **Album folder for sidecar calls = `albumPath`** — the first track's
+    gonic `path` minus the filename (e.g. `h/the_high_llamas/2003-beet_maize__corn`,
+    the same value the "On-disk location" box shows). Every album-level
+    sidecar call (cover upload, sidecar cover URL, album/track tag saves) sends
+    it as `&dir=`, in both `Albums.vue` and `Artists.vue`. Reason: guessing the
+    folder from tag names failed whenever tags and folder name disagreed (a
+    `&` dropped by the slug, a different album artist, a longer/edited title)
+    — "album directory not found". `albumDiskIdentity()` (album-artist + album
+    name, with the `_diskArtist`/`_diskAlbum` local override) is still sent as
+    `artist`/`album` and is only the fallback when `albumPath` is empty.
 - **Playlists.vue** — playlist grid with hover-play, detail with removable
   `TrackItem`s, create/rename/delete, "save queue as playlist" lives in the
   desktop Player.
@@ -210,7 +223,18 @@ Auth-guarded SPA routes:
   shuffle/repeat/prev/play/next, click-to-seek progress bar, volume slider +
   mute, and a Queue panel / **Lyrics panel** (mutually exclusive; lyrics
   auto-center the active line via `scrollIntoView`). Also a "Save as playlist"
-  flow.
+  flow. A chevrons-down button **minimizes** the footer into `CompactPlayer`.
+- **`CompactPlayer.vue`** (desktop, minimized state) — the iTunes-MiniPlayer
+  style strip: `h-12`, tiny cover (click = expand), truncated title/artist,
+  prev/play/next, thumbnail scrubber, fill percentage and a chevrons-up expand
+  button. Same `player` store, so playback is untouched. The minimized flag is
+  `attic_player_minimized` in `localStorage` (so it survives a reload) and
+  `Player.vue` owns it: `compact` vs `v-else` on the full footer, and
+  `setMinimized(true)` force-closes the Queue/Lyrics panels because they anchor
+  to the full footer's `bottom-20`. `compact` is
+  `minimized || ui.minimal`, so minimal mode forces the strip as an **override**
+  without overwriting the user's own minimize choice; `expandFromCompact()`
+  clears both so the strip's expand button always has a visible effect.
 - **`MiniPlayer.vue`** (mobile) — fixed bar above the bottom nav
   (`bottom: 64px`), thin progress strip, prev/play/next, tap to expand the
   FullPlayer.
@@ -222,7 +246,12 @@ Auth-guarded SPA routes:
 - **`SideBar.vue`** (desktop) — header w/ server name, nav (with a **library
   rescan** button that calls `startScan` and polls `getScanStatus` every 30s),
   debounced search dropdown, "✨ Ask AI" button opening `AskAiModal`, "Recent
-  plays" (Last.fm scrobbles polled every 30s), sign-out.
+  plays" (Last.fm scrobbles polled every 30s), sign-out, and the **minimal-mode
+  toggle** (`PanelLeftClose`/`PanelLeftOpen`) that flips `ui.minimal`. In
+  minimal mode the sidebar becomes a `w-16` icon rail — header, search, Ask AI
+  and Recent plays are unmounted, nav labels are replaced by `title` tooltips,
+  and sign-out becomes an `LogOut` icon. `w-56`/`w-16` are swapped on the same
+  `<aside>` with a `transition-[width]` so the collapse animates.
 - **`AskAiModal.vue`** (desktop) — centered overlay; on submit calls `askAI`,
   renders the reply (splitting `**bold**` text into segments rather than
   `v-html` — model output is never treated as HTML) plus `TrackItem` rows.
@@ -263,11 +292,21 @@ write ID3 tags.
   `accentMap`, `&`→`and`, non-alphanumerics collapsed, leading articles
   stripped, `YYYY-` prefix stripped for albums). Re-scans every 5 minutes. Logs
   a fatal error if the NFS isn't ready at boot.
+- **Album folder lookup (`albumDirFor()`)**: `/album`, `/upload`,
+  `/album-tags` and `/track-tags` accept an optional `dir` — the album folder
+  relative to `MUSIC_ROOT`, as gonic reports it. When present it is used
+  directly (`filepath.Clean("/"+dir)` strips `..`, so it cannot leave the
+  root; it must exist and be a directory) and the name maps are not consulted.
+  Without it, the old `normalize(artist)|normalize(album)` map lookup is used.
+  The maintenance endpoints (`/audit`, `/cleanup`, `/normalize-cover`,
+  `/re-embed-cover`, `/convert`, `/enrich`, `/enrich-lyrics`) still use only
+  the name lookup, so they can still miss albums whose tags and folder name
+  disagree.
 - **Endpoints**:
-  - `GET /avatar?name=` / `GET /album?artist=&album=` — `http.ServeFile` with
+  - `GET /avatar?name=` / `GET /album?artist=&album=[&dir=]` — `http.ServeFile` with
     `Cache-Control: max-age=86400`; optional HIT/MISS request logging
     (`LOG_REQUESTS`).
-  - `POST /upload?artist=&album=` — saves a `cover.jpg` into the album dir
+  - `POST /upload?artist=&album=[&dir=]` — saves a `cover.jpg` into the album dir
     (returns **202 Accepted** because it kicks off a background goroutine that
     **embeds the cover into every MP3's ID3 APIC frame** via `id3v2`,
     fire-and-forget).
@@ -279,9 +318,9 @@ write ID3 tags.
     reports what would change. Skips files already square and ≤150px, so it is
     safe to re-run; writes via temp file + rename. **Overwrites originals — no
     undo.** Album covers are untouched.
-  - `POST /album-tags?artist=&album=` — writes `TALB`/`TPE1`/`TPE2`/`TCON`/
+  - `POST /album-tags?artist=&album=[&dir=]` — writes `TALB`/`TPE1`/`TPE2`/`TCON`/
     `TDRC`+`TYER` to every `.mp3` in the album dir.
-  - `POST /track-tags?artist=&album=` — writes `TIT2`/`TPE1`/`TRCK` to one file
+  - `POST /track-tags?artist=&album=[&dir=]` — writes `TIT2`/`TPE1`/`TRCK` to one file
     (`file` basename, `filepath.Base` guards traversal).
 - **`toJPEG()`**: passes JPEG/PNG/GIF through untouched, but re-encodes
   anything else (notably **WebP**) as JPEG — because gonic's Go stdlib image
@@ -479,7 +518,9 @@ level.
 - **Artist folder name == the Album Artist MP3 tag** (e.g. `bob_seger`), *not*
   the track artist (`bob seger & the silver bullet band`). The frontend uses
   `album.albumArtist || album.artist` when building sidecar URLs; the sidecar
-  normalizes both sides identically so lookups match.
+  normalizes both sides identically so lookups match. Album-level calls also
+  send the real folder (`&dir=`), which bypasses this match — see §4 "Album
+  folder lookup".
 - **Auth styles**:
   - Browser → gonic: hex-encoded password (`p=enc:`), client id `atticweb`.
   - Backends (chat-server, mcp-server) → gonic: token auth

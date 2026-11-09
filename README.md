@@ -150,6 +150,7 @@ src/
 - Album detail views (`Artists.vue`, `Albums.vue`) use reactive `albumDetailCoverSrc`/`albumDetailCoverState` refs (`'loading'` → `'sidecar'` → `'failed'`) to drive the fallback chain; when both sources fail, an "Add cover" label/file-input is shown
 - Album grid cards (artist detail view) use the DOM-based `onAlbumCoverError(e, album)` pattern (same as Albums.vue carousel/grid) — tries sidecar via `dataset.triedSidecar`, then hides
 - The sidecar builds three maps at startup and rescans every 5 minutes: artist covers (`normalize(artist)` → path), album covers (`normalize(artist)|normalize(album)` → path), and album dirs (`normalize(artist)|normalize(album)` → directory path, regardless of whether a cover exists)
+- `/album`, `/upload`, `/album-tags` and `/track-tags` take an optional `dir` param — the album folder relative to the music root, from gonic's track `path` (what the "On-disk location" box shows). The album views always send it, and the sidecar then uses that folder directly instead of matching names; `albumDirMap` is only the fallback when `dir` is absent. This fixed "album directory not found" for albums whose tags and folder name disagree (e.g. tag `beet, maize & corn` vs folder `2003-beet_maize__corn`). The maintenance/Tools endpoints still use only the name lookup
 - `albumDirMap` enables the `/upload` POST endpoint: accepts `artist` + `album` query params and a `cover` multipart file, writes it as `cover.jpg` into the album directory on the NFS share, and updates `albumCoverMap` immediately; after upload the frontend requests the sidecar URL with `?t=<timestamp>` to bust browser cache
 - Album folders are named `YYYY-album_name_with_underscores`; the sidecar strips the leading `YYYY-` before normalizing so it matches the API album name
 - The artist folder name corresponds to the **Album Artist** mp3 tag (e.g. `bob_seger`), not the track Artist tag (e.g. `bob seger & the silver bullet band`); the frontend uses `album.albumArtist || album.artist` when building the sidecar URL
@@ -222,6 +223,26 @@ src/
   Keep those desktop rows free of bottom padding — collapsed rows overflow into it.
 - Desktop footer player (`Player.vue`): below `lg` the track info narrows and the
   volume slider is hidden so Lyrics/Queue always fit
+- Desktop footer player can be **minimized** to `CompactPlayer.vue`, an
+  iTunes-MiniPlayer-style `h-12` strip (cover + title/artist + prev/play/next +
+  thumbnail scrubber). Chevrons-down in the full footer minimizes, any of the
+  strip's cover/chevrons-up expands. State is `attic_player_minimized` in
+  `localStorage`; minimizing closes the Queue/Lyrics panels. Mobile is
+  unaffected — `MiniPlayer`/`FullPlayer` stay the mobile path, and both desktop
+  players are `hidden md:flex`
+
+### Minimal (desktop UI mode)
+- A **zen/minimal** toggle for desktop, for when the full UI feels busy. The
+  sidebar footer has the button (`PanelLeftClose` / `PanelLeftOpen`); state is
+  `attic_ui_minimal` in `localStorage` via the `ui` store (`src/stores/ui.js`)
+- What it hides on desktop: the sidebar header + server name, search + ✨ Ask AI,
+  Recent plays, the nav labels (sidebar collapses `w-56` → `w-16` icon rail,
+  labels become `title` tooltips, sign-out becomes an icon), the Home
+  Recently Added / Discover carousels, and the Albums Recently Added / Discover
+  carousels. The footer player drops to the `CompactPlayer` strip
+- It is an **override**, not a reset: `minimized` and `ui.minimal` are separate
+  keys, so leaving minimal mode restores your previous player height. The
+  strip's expand button clears both, so it always visibly expands
 - Carousels were dropped on mobile because they were never used — three visible
   items and a teasing sliver of a fourth, with everything else behind a swipe
 

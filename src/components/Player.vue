@@ -1,6 +1,9 @@
 <template>
+  <!-- DESKTOP COMPACT (MINIMIZED) PLAYER -->
+  <CompactPlayer v-if="compact" @expand="expandFromCompact" />
+
   <!-- DESKTOP PLAYER -->
-  <footer class="hidden md:flex h-20 bg-white border-t border-stone-200 items-center px-4 lg:px-6 gap-3 lg:gap-6 z-50 flex-shrink-0">
+  <footer v-else class="hidden md:flex h-20 bg-white border-t border-stone-200 items-center px-4 lg:px-6 gap-3 lg:gap-6 z-50 flex-shrink-0">
 
     <!-- TRACK INFO -->
     <div class="flex items-center gap-3 w-44 lg:w-60 flex-shrink-0 overflow-hidden">
@@ -82,6 +85,13 @@
         @click="showQueue = !showQueue; showLyrics = false"
       >
         Queue{{ player.queue.length ? ` (${player.queue.length})` : '' }}
+      </button>
+      <button
+        class="ctrl flex-shrink-0"
+        title="Minimize player"
+        @click="setMinimized(true)"
+      >
+        <ChevronsDown :size="15" />
       </button>
     </div>
 
@@ -181,15 +191,20 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
-import { Shuffle, Repeat, Play, Pause, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-vue-next'
+import { Shuffle, Repeat, Play, Pause, SkipBack, SkipForward, Volume1, Volume2, VolumeX, ChevronsDown } from 'lucide-vue-next'
 import { usePlayerStore } from '../stores/player'
+import { useUiStore } from '../stores/ui'
 import { coverUrl, createPlaylist } from '../api/subsonic'
 import { fetchLyrics, saveManualLyrics } from '../api/lyrics'
+import CompactPlayer from './CompactPlayer.vue'
 import MiniPlayer from './MiniPlayer.vue'
 import FullPlayer from './FullPlayer.vue'
 import BottomNav  from './BottomNav.vue'
 
+const MINIMIZED_KEY = 'attic_player_minimized'
+
 const player         = usePlayerStore()
+const ui             = useUiStore()
 const showQueue      = ref(false)
 const showLyrics     = ref(false)
 const fullPlayerOpen = ref(false)
@@ -198,6 +213,32 @@ const lyrics         = ref(null)
 const lyricsLoading  = ref(false)
 const lyricsEl       = ref(null)
 const lineEls        = ref([])
+
+// ── MINIMIZED (compact) DESKTOP PLAYER ──────────────────
+// Persisted so the choice survives a reload; the panels below are closed on
+// minimize because they anchor to the full footer's `bottom-20`.
+const minimized = ref(localStorage.getItem(MINIMIZED_KEY) === '1')
+
+// Minimal mode always uses the compact strip, but as an override — the user's
+// own minimize toggle is left untouched and comes back when minimal mode ends.
+const compact = computed(() => minimized.value || ui.minimal)
+
+function setMinimized(value) {
+  minimized.value = value
+  try { localStorage.setItem(MINIMIZED_KEY, value ? '1' : '0') } catch (_) {}
+  if (value) {
+    showQueue.value  = false
+    showLyrics.value = false
+  }
+}
+
+function expandFromCompact() {
+  // The strip's expand must always have a visible effect: clear the manual
+  // minimize flag *and* leave minimal mode, which would otherwise keep it
+  // compact via the `compact` override.
+  setMinimized(false)
+  if (ui.minimal) ui.setMinimal(false)
+}
 
 const activeLine = computed(() => {
   if (!lyrics.value?.synced) return -1
