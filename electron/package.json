@@ -1,0 +1,33 @@
+{
+  "name": "attic-music-desktop",
+  "version": "1.0.0",
+  "description": "Electron wrapper around the Attic Music web app",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "me.ekskog.attic-music",
+    "productName": "Attic Music",
+    "files": [
+      "main.js",
+      "preload.js"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.png"
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
