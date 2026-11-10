@@ -26,6 +26,7 @@ npm run preview   # serve production build locally
 
 ```
 mcp-server/      # gonic MCP server for Claude Code (merged in, see below) — NOT part of the Vite app
+electron/        # macOS desktop wrapper around the live site (see electron/README.md) — NOT part of the Vite app
 chat-server/     # Ask AI backend — Node HTTP + LLM tool loop (see below) — NOT part of the Vite app
   index.js        # the server: POST /chat, GET /providers, Subsonic search tool
   Dockerfile      # → ghcr.io/xkogd66/chat-server:latest
