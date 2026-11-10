@@ -35,6 +35,8 @@ export const useConfigStore = defineStore('config', () => {
   function logout() {
     password.value = ''
     loggedIn.value = false
+    // Electron only: forget the remembered login so we don't silently log back in.
+    window.attic?.clearCredentials?.()
   }
 
   return { server, username, password, lastfmUser, lastfmKey, turnstileSiteKey, loggedIn, load, saveSession, logout }

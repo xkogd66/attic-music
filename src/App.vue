@@ -30,17 +30,38 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useConfigStore } from './stores/config'
 import SideBar from './components/SideBar.vue'
 import Player  from './components/Player.vue'
 import { useUiStore } from './stores/ui'
+import { ping } from './api/subsonic'
 
 const config = useConfigStore()
 const ui     = useUiStore()
+const router = useRouter()
 const ready  = ref(false)
+
+// Electron only: log in silently from the credentials remembered in the
+// Keychain-backed store. Nothing remembered, or the ping fails (offline, changed
+// password) → fall through to the login form, pre-filled.
+async function autoLogin() {
+  const creds = await window.attic?.getCredentials?.()
+  if (!creds) return
+  config.server   = creds.server
+  config.username = creds.username
+  config.password = creds.password
+  try {
+    await ping()
+    config.saveSession()
+    await router.isReady() // the first navigation may already have bounced to /login
+    if (router.currentRoute.value.name === 'login') router.replace('/home')
+  } catch (_) {}
+}
 
 onMounted(async () => {
   await config.load()
+  await autoLogin()
   ready.value = true
 })
 </script>

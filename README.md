@@ -86,6 +86,11 @@ src/
   deliberately no "remember me" — an earlier build stored the password in
   plaintext under `localStorage.attic_cfg`, and `load()` now deletes that key
   on startup to clear it from machines that still have one.
+  **Exception — the Electron wrapper** (`electron/`): the login form offers
+  "Remember on this Mac", and the credentials are stored encrypted with
+  Electron `safeStorage` (Keychain-backed), never as plaintext. On launch
+  `App.vue` logs in silently from them; Sign out forgets them. Nothing stored
+  or a failed ping → the login form, pre-filled
 - `Login.vue` verifies credentials with a real `ping()` against the server
   before `saveSession()` sets `loggedIn`; a failed ping never logs you in
 - Route guards block all routes until `config.loggedIn` is true, and `App.vue`

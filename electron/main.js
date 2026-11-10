@@ -1,6 +1,7 @@
 // Thin Electron shell: loads the live site, so web deploys update the app with
 // no rebuild. The only native feature is the mini-player window (see preload.js).
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron')
+const fs = require('fs')
 const path = require('path')
 
 const APP_URL    = process.env.ATTIC_URL || 'https://music.ekskog.me'
@@ -38,10 +39,12 @@ function createWindow() {
   win.webContents.on('will-navigate', (e, url) => { if (external(url)) e.preventDefault() })
 }
 
-// Called from the web app via preload.js when mini-player mode toggles (and on
-// load, if it was left on). Only our own origin may call it.
+// IPC is only honoured from our own origin.
+const fromApp = (event) => new URL(event.senderFrame.url).origin === APP_ORIGIN
+
+// Called from the web app via preload.js when mini-player mode toggles.
 ipcMain.on('attic:set-mini', (event, on) => {
-  if (!win || new URL(event.senderFrame.url).origin !== APP_ORIGIN) return
+  if (!win || !fromApp(event)) return
   if (on === true) {
     if (!fullBounds) fullBounds = win.getBounds()
     win.setAlwaysOnTop(true, 'floating')
@@ -51,6 +54,30 @@ ipcMain.on('attic:set-mini', (event, on) => {
     win.setBounds(fullBounds ? { ...fullBounds } : { ...win.getBounds(), ...FULL_SIZE }, true)
     fullBounds = null
   }
+})
+
+// ── Remembered login ───────────────────────────────────────────────────────
+// {server, username, password} encrypted with safeStorage (key held in the
+// macOS Keychain). Never written as plaintext: if encryption isn't available
+// we refuse to save. The web build never persists credentials; this is the
+// Electron-only exception.
+const credsFile = () => path.join(app.getPath('userData'), 'credentials.bin')
+
+ipcMain.handle('attic:get-credentials', (event) => {
+  if (!fromApp(event) || !safeStorage.isEncryptionAvailable()) return null
+  try { return JSON.parse(safeStorage.decryptString(fs.readFileSync(credsFile()))) } catch { return null }
+})
+
+ipcMain.handle('attic:save-credentials', (event, creds) => {
+  if (!fromApp(event) || !safeStorage.isEncryptionAvailable()) return false
+  const { server, username, password } = creds || {}
+  if (![server, username, password].every((v) => typeof v === 'string' && v)) return false
+  try { fs.writeFileSync(credsFile(), safeStorage.encryptString(JSON.stringify({ server, username, password })), { mode: 0o600 }); return true } catch { return false }
+})
+
+ipcMain.handle('attic:clear-credentials', (event) => {
+  if (!fromApp(event)) return false
+  try { fs.rmSync(credsFile(), { force: true }); return true } catch { return false }
 })
 
 app.whenReady().then(() => {

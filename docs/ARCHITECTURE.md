@@ -70,8 +70,16 @@ ClusterIP services.
   renders a **Cloudflare Turnstile** widget (loaded on demand, site key from
   config.json), and verifies credentials with a real `ping()` against the
   Subsonic server *before* calling `saveSession()`.
-- There is deliberately **no "remember me"** — every reload/tab requires
-  re-login.
+- There is deliberately **no "remember me"** on the web — every reload/tab
+  requires re-login. **Electron exception:** `window.attic` (preload) exposes
+  `get/save/clearCredentials`, backed by `electron/main.js` which keeps
+  `{server, username, password}` in `userData/credentials.bin` encrypted with
+  `safeStorage` (Keychain-held key; refuses to save if encryption is
+  unavailable). `Login.vue` shows a "Remember on this Mac" checkbox (default
+  on) only when the bridge exists; `App.vue`'s `autoLogin()` runs after
+  `config.load()` and before `ready`, pings, then `saveSession()`s and leaves
+  `/login`; `config.logout()` clears the stored copy. The Turnstile widget is
+  client-side only and is not shown on a silent login.
 - Password auth to gonic uses the Subsonic **hex-encoded password** scheme:
   `p=enc:<hex>` with `v=1.16.1&c=atticweb&f=json`.
 

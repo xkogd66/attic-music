@@ -19,6 +19,11 @@
         </div>
       </div>
 
+      <label v-if="canRemember" class="mt-4 flex items-center gap-2 text-xs text-stone-600 cursor-pointer">
+        <input type="checkbox" v-model="remember" class="[accent-color:var(--accent)]" />
+        Remember on this Mac
+      </label>
+
       <div v-if="config.turnstileSiteKey" ref="turnstileEl" class="mt-4"></div>
 
       <button
@@ -48,6 +53,10 @@ const error          = ref('')
 const turnstileEl    = ref(null)
 const turnstileToken = ref('')
 const widgetId       = ref(null)
+
+// Electron only (window.attic, see electron/): offer to remember the login.
+const canRemember = !!window.attic?.saveCredentials
+const remember    = ref(true)
 
 const form = reactive({
   server:   '',
@@ -95,6 +104,9 @@ async function login() {
     config.password = form.password
     await ping()
     config.saveSession()
+    if (canRemember && remember.value) {
+      await window.attic.saveCredentials({ server: config.server, username: config.username, password: config.password })
+    }
     router.push('/')
   } catch(e) {
     error.value = 'Could not connect — check URL and credentials.'
