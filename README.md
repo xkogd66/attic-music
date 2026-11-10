@@ -4,6 +4,8 @@ A responsive Vue 3 music player webapp that connects to a Subsonic-compatible se
 
 > 📖 Codebase architecture: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+> 🖥️ macOS desktop app: see [docs/STANDALONE-ELECTRON-APP.md](docs/STANDALONE-ELECTRON-APP.md).
+
 ## Tech Stack
 
 - **Vue 3** — Composition API with `<script setup>` SFCs throughout

@@ -25,6 +25,9 @@
         "dmg"
       ],
       "icon": "build/icon.png"
+    },
+    "dmg": {
+      "writeUpdateInfo": false
     }
   },
   "allowScripts": {
