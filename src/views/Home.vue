@@ -8,8 +8,8 @@
       <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
       <template v-else>
 
-        <!-- ══ DESKTOP: carousels (hidden in minimal mode) ══ -->
-        <div v-if="!ui.minimal" class="hidden md:block">
+        <!-- ══ DESKTOP: carousels ══ -->
+        <div class="hidden md:block">
 
           <!-- Recently Added Artists -->
           <div v-if="recentArtists.length" class="pt-5 mb-6">
@@ -147,11 +147,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getArtists, getNewestAlbums, getRandomAlbums, coverUrl } from '../api/subsonic'
-import { useUiStore } from '../stores/ui'
 import AlbumRating from '../components/AlbumRating.vue'
 
 const router = useRouter()
-const ui     = useUiStore()
 
 const loading         = ref(true)
 const recentArtists   = ref([])

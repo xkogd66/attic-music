@@ -231,18 +231,17 @@ src/
   unaffected — `MiniPlayer`/`FullPlayer` stay the mobile path, and both desktop
   players are `hidden md:flex`
 
-### Minimal (desktop UI mode)
-- A **zen/minimal** toggle for desktop, for when the full UI feels busy. The
-  sidebar footer has the button (`PanelLeftClose` / `PanelLeftOpen`); state is
-  `attic_ui_minimal` in `localStorage` via the `ui` store (`src/stores/ui.js`)
-- What it hides on desktop: the sidebar header + server name, search + ✨ Ask AI,
-  Recent plays, the nav labels (sidebar collapses `w-56` → `w-16` icon rail,
-  labels become `title` tooltips, sign-out becomes an icon), the Home
-  Recently Added / Discover carousels, and the Albums Recently Added / Discover
-  carousels. The footer player drops to the `CompactPlayer` strip
-- It is an **override**, not a reset: `minimized` and `ui.minimal` are separate
-  keys, so leaving minimal mode restores your previous player height. The
-  strip's expand button clears both, so it always visibly expands
+### Mini-player mode (desktop PWA)
+- The sidebar footer's `PanelLeftClose` button turns the whole app into a mini
+  player (`MiniWindow.vue`: cover, title/artist, scrubber, prev/play/next). The
+  sidebar and every view are unmounted; playback is untouched (audio lives in
+  the `player` store). The `PanelLeftOpen` button in the window exits. State is
+  `attic_ui_minimal` in `localStorage` via the `ui` store (`src/stores/ui.js`),
+  so the app reopens in mini mode
+- **The page cannot resize its own window** (Safari web apps ignore
+  `window.resizeTo`): shrink the PWA window by hand once. The layout fills any
+  size and ignores the `md` breakpoint, so a small window does not flip to the
+  mobile UI. Independent of the `minimized` footer strip above
 - Carousels were dropped on mobile because they were never used — three visible
   items and a teasing sliver of a fourth, with everything else behind a swipe
 

@@ -5,8 +5,8 @@
          not rendered at all, so nothing behind it can mount or fetch. -->
     <template v-if="config.loggedIn">
 
-      <!-- DESKTOP: sidebar + content -->
-      <div class="hidden md:flex flex-1 overflow-hidden">
+      <!-- DESKTOP: sidebar + content (not mounted in mini-player mode) -->
+      <div v-if="!ui.minimal" class="hidden md:flex flex-1 overflow-hidden">
         <SideBar />
         <main class="flex-1 flex flex-col overflow-hidden">
           <RouterView />
@@ -14,7 +14,7 @@
       </div>
 
       <!-- MOBILE: full width content -->
-      <div class="flex md:hidden flex-1 flex-col overflow-hidden">
+      <div v-if="!ui.minimal" class="flex md:hidden flex-1 flex-col overflow-hidden">
         <RouterView />
       </div>
 
@@ -33,8 +33,10 @@ import { ref, onMounted } from 'vue'
 import { useConfigStore } from './stores/config'
 import SideBar from './components/SideBar.vue'
 import Player  from './components/Player.vue'
+import { useUiStore } from './stores/ui'
 
 const config = useConfigStore()
+const ui     = useUiStore()
 const ready  = ref(false)
 
 onMounted(async () => {

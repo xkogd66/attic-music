@@ -140,11 +140,10 @@ Auth-guarded SPA routes:
 - **`playlist`** — caches the playlist list (`load()` once on first use) and
   `addTrack(playlistId, trackId)`.
 - **`ui`** (`src/stores/ui.js`) — desktop presentation prefs, currently just
-  `minimal` (**minimal/"zen" mode**) persisted to `localStorage.attic_ui_minimal`
-  via `setMinimal()`/`toggleMinimal()`. Read by `SideBar` (icon rail),
-  `Player` (compact strip), and `Home`/`Albums` (carousels). Mobile ignores it —
-  every affected element is already desktop-only (`md:`), and the mobile
-  `MiniPlayer`/`FullPlayer`/`BottomNav` path never consults it.
+  `minimal` (**mini-player mode**) persisted to `localStorage.attic_ui_minimal`
+  via `setMinimal()`/`toggleMinimal()`. Read by `App.vue` (unmounts the sidebar
+  and views) and `Player.vue` (renders `MiniWindow`, skips the mobile
+  `MiniPlayer`/`FullPlayer`/`BottomNav`).
 
 
 ### 3.6 Views
@@ -231,10 +230,14 @@ Auth-guarded SPA routes:
   `attic_player_minimized` in `localStorage` (so it survives a reload) and
   `Player.vue` owns it: `compact` vs `v-else` on the full footer, and
   `setMinimized(true)` force-closes the Queue/Lyrics panels because they anchor
-  to the full footer's `bottom-20`. `compact` is
-  `minimized || ui.minimal`, so minimal mode forces the strip as an **override**
-  without overwriting the user's own minimize choice; `expandFromCompact()`
-  clears both so the strip's expand button always has a visible effect.
+  to the full footer's `bottom-20`. Independent of mini-player mode below.
+- **`MiniWindow.vue`** (mini-player mode, `ui.minimal`) — the whole window is
+  the player: cover, title/artist, scrubber with times, prev/play/next, and an
+  exit button (`PanelLeftOpen`). `Player.vue` renders it first in its
+  `v-if` chain; `App.vue` `v-if="!ui.minimal"`s the desktop and mobile layout
+  wrappers, so no view mounts or fetches. No `md:` gating — it fills any window
+  size, which matters because a hand-shrunk PWA window is below 768px and would
+  otherwise show the mobile UI. Page JS can't resize the window itself.
 - **`MiniPlayer.vue`** (mobile) — fixed bar above the bottom nav
   (`bottom: 64px`), thin progress strip, prev/play/next, tap to expand the
   FullPlayer.
@@ -246,12 +249,9 @@ Auth-guarded SPA routes:
 - **`SideBar.vue`** (desktop) — header w/ server name, nav (with a **library
   rescan** button that calls `startScan` and polls `getScanStatus` every 30s),
   debounced search dropdown, "✨ Ask AI" button opening `AskAiModal`, "Recent
-  plays" (Last.fm scrobbles polled every 30s), sign-out, and the **minimal-mode
-  toggle** (`PanelLeftClose`/`PanelLeftOpen`) that flips `ui.minimal`. In
-  minimal mode the sidebar becomes a `w-16` icon rail — header, search, Ask AI
-  and Recent plays are unmounted, nav labels are replaced by `title` tooltips,
-  and sign-out becomes an `LogOut` icon. `w-56`/`w-16` are swapped on the same
-  `<aside>` with a `transition-[width]` so the collapse animates.
+  plays" (Last.fm scrobbles polled every 30s), sign-out, and the **mini-player
+  toggle** (`PanelLeftClose`) that sets `ui.minimal`, replacing the whole app
+  with `MiniWindow`.
 - **`AskAiModal.vue`** (desktop) — centered overlay; on submit calls `askAI`,
   renders the reply (splitting `**bold**` text into segments rather than
   `v-html` — model output is never treated as HTML) plus `TrackItem` rows.

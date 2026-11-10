@@ -1,6 +1,9 @@
 <template>
+  <!-- MINI-PLAYER MODE: the whole window is the player (App.vue hides the rest) -->
+  <MiniWindow v-if="ui.minimal" />
+
   <!-- DESKTOP COMPACT (MINIMIZED) PLAYER -->
-  <CompactPlayer v-if="compact" @expand="expandFromCompact" />
+  <CompactPlayer v-else-if="minimized" @expand="setMinimized(false)" />
 
   <!-- DESKTOP PLAYER -->
   <footer v-else class="hidden md:flex h-20 bg-white border-t border-stone-200 items-center px-4 lg:px-6 gap-3 lg:gap-6 z-50 flex-shrink-0">
@@ -179,14 +182,16 @@
     </Transition>
   </footer>
 
-  <!-- MOBILE MINI PLAYER -->
-  <MiniPlayer @expand="fullPlayerOpen = true" />
+  <template v-if="!ui.minimal">
+    <!-- MOBILE MINI PLAYER -->
+    <MiniPlayer @expand="fullPlayerOpen = true" />
 
-  <!-- MOBILE FULL PLAYER -->
-  <FullPlayer :show="fullPlayerOpen" @collapse="fullPlayerOpen = false" />
+    <!-- MOBILE FULL PLAYER -->
+    <FullPlayer :show="fullPlayerOpen" @collapse="fullPlayerOpen = false" />
 
-  <!-- MOBILE BOTTOM NAV -->
-  <BottomNav />
+    <!-- MOBILE BOTTOM NAV -->
+    <BottomNav />
+  </template>
 </template>
 
 <script setup>
@@ -197,6 +202,7 @@ import { useUiStore } from '../stores/ui'
 import { coverUrl, createPlaylist } from '../api/subsonic'
 import { fetchLyrics, saveManualLyrics } from '../api/lyrics'
 import CompactPlayer from './CompactPlayer.vue'
+import MiniWindow from './MiniWindow.vue'
 import MiniPlayer from './MiniPlayer.vue'
 import FullPlayer from './FullPlayer.vue'
 import BottomNav  from './BottomNav.vue'
@@ -219,10 +225,6 @@ const lineEls        = ref([])
 // minimize because they anchor to the full footer's `bottom-20`.
 const minimized = ref(localStorage.getItem(MINIMIZED_KEY) === '1')
 
-// Minimal mode always uses the compact strip, but as an override — the user's
-// own minimize toggle is left untouched and comes back when minimal mode ends.
-const compact = computed(() => minimized.value || ui.minimal)
-
 function setMinimized(value) {
   minimized.value = value
   try { localStorage.setItem(MINIMIZED_KEY, value ? '1' : '0') } catch (_) {}
@@ -230,14 +232,6 @@ function setMinimized(value) {
     showQueue.value  = false
     showLyrics.value = false
   }
-}
-
-function expandFromCompact() {
-  // The strip's expand must always have a visible effect: clear the manual
-  // minimize flag *and* leave minimal mode, which would otherwise keep it
-  // compact via the `compact` override.
-  setMinimized(false)
-  if (ui.minimal) ui.setMinimal(false)
 }
 
 const activeLine = computed(() => {

@@ -1,18 +1,17 @@
 <template>
   <aside
-    class="bg-white border-r border-stone-200 flex flex-col h-full flex-shrink-0 transition-[width] duration-200"
-    :class="ui.minimal ? 'w-16' : 'w-56'"
+    class="bg-white border-r border-stone-200 flex flex-col h-full flex-shrink-0 w-56"
   >
 
     <!-- HEADER -->
-    <div v-if="!ui.minimal" class="px-6 py-7 border-b border-stone-200 flex-shrink-0">
+    <div class="px-6 py-7 border-b border-stone-200 flex-shrink-0">
       <div class="font-serif text-2xl font-semibold">attic player</div>
       <div class="text-xs text-stone-600 mt-0.5 truncate">{{ config.server }}</div>
     </div>
 
     <!-- NAV -->
-    <nav class="flex-shrink-0" :class="ui.minimal ? 'py-3 px-2' : 'p-4'">
-      <div v-if="!ui.minimal" class="flex items-center justify-between px-2 py-2">
+    <nav class="flex-shrink-0 p-4">
+      <div class="flex items-center justify-between px-2 py-2">
         <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Library</span>
         <button
           type="button"
@@ -24,22 +23,20 @@
           <RefreshCw :size="14" :class="{ 'animate-spin': scanning }" />
         </button>
       </div>
-      <div v-if="scanning && !ui.minimal" class="px-2 pb-2 text-xs text-stone-500">scanning…</div>
+      <div v-if="scanning" class="px-2 pb-2 text-xs text-stone-500">scanning…</div>
       <RouterLink
         v-for="item in navItems" :key="item.to"
         :to="item.to"
         class="nav-item"
-        :class="[isActive(item.to) ? 'active' : '', ui.minimal ? 'justify-center px-0' : '']"
-        :title="ui.minimal ? item.label : null"
+        :class="isActive(item.to) ? 'active' : ''"
       >
         <component :is="item.icon" :size="16" />
-        <span v-if="!ui.minimal">{{ item.label }}</span>
+        <span>{{ item.label }}</span>
       </RouterLink>
     </nav>
 
     <!-- SEARCH -->
     <div
-      v-if="!ui.minimal"
       class="px-4 pb-4 flex-shrink-0 relative"
       ref="searchContainer"
     >
@@ -119,32 +116,22 @@
     </div>
 
     <!-- SCROBBLES -->
-    <RecentPlays v-if="config.lastfmUser && config.lastfmKey && !ui.minimal" />
+    <RecentPlays v-if="config.lastfmUser && config.lastfmKey" />
 
     <!-- FOOTER -->
-    <div
-      class="border-t border-stone-200 flex-shrink-0 flex items-center"
-      :class="ui.minimal ? 'flex-col gap-2 px-2 py-3' : 'px-6 py-4 justify-between'"
-    >
+    <div class="border-t border-stone-200 flex-shrink-0 flex items-center px-6 py-4 justify-between">
       <button
-        class="text-stone-600 hover:text-amber-700 transition-colors"
-        :class="ui.minimal ? 'text-xs leading-none' : 'text-xs'"
-        :title="ui.minimal ? 'Sign out' : null"
+        class="text-stone-600 hover:text-amber-700 transition-colors text-xs"
         @click="logout"
-      >
-        <LogOut v-if="ui.minimal" :size="15" />
-        <span v-else>Sign out</span>
-      </button>
+      >Sign out</button>
 
-      <!-- MINIMAL-MODE TOGGLE -->
+      <!-- MINI-PLAYER MODE TOGGLE -->
       <button
         class="text-stone-600 hover:text-amber-700 transition-colors"
-        :title="ui.minimal ? 'Exit minimal mode' : 'Minimal mode'"
-        :aria-pressed="ui.minimal ? 'true' : 'false'"
-        @click="ui.toggleMinimal()"
+        title="Mini player"
+        @click="ui.setMinimal(true)"
       >
-        <PanelLeftOpen v-if="ui.minimal" :size="15" />
-        <PanelLeftClose v-else :size="15" />
+        <PanelLeftClose :size="15" />
       </button>
     </div>
 
@@ -163,7 +150,7 @@ import { search, startScan, getScanStatus } from '../api/subsonic'
 import RecentPlays from './RecentPlays.vue'
 import AskAiModal from './AskAiModal.vue'
 import AlbumRating from './AlbumRating.vue'
-import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
+import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose } from 'lucide-vue-next'
 
 const config = useConfigStore()
 const player = usePlayerStore()

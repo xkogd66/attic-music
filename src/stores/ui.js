@@ -5,8 +5,8 @@ import { ref } from 'vue'
 export const useUiStore = defineStore('ui', () => {
   const MINIMAL_KEY = 'attic_ui_minimal'
 
-  // Zen/"minimal" desktop mode: icon-rail sidebar, compact player, no carousels.
-  // Persisted so the choice survives a reload.
+  // Mini-player mode: App.vue unmounts the sidebar + views and MiniWindow fills
+  // the window. Persisted so the choice survives a reload.
   const minimal = ref(localStorage.getItem(MINIMAL_KEY) === '1')
 
   function setMinimal(value) {
