@@ -238,7 +238,8 @@ src/
   sidebar and every view are unmounted; playback is untouched (audio lives in
   the `player` store). The `PanelLeftOpen` button in the window exits. State is
   `attic_ui_minimal` in `localStorage` via the `ui` store (`src/stores/ui.js`),
-  so the app reopens in mini mode
+  so the PWA/browser reopens in mini mode (the Electron wrapper always starts
+  in full mode)
 - **The page cannot resize its own window** (Safari web apps ignore
   `window.resizeTo`): shrink the PWA window by hand once. The layout fills any
   size and ignores the `md` breakpoint, so a small window does not flip to the

@@ -6,7 +6,7 @@ const path = require('path')
 const APP_URL    = process.env.ATTIC_URL || 'https://music.ekskog.me'
 const APP_ORIGIN = new URL(APP_URL).origin
 const FULL_SIZE  = { width: 1200, height: 800 }
-const MINI_SIZE  = { width: 380, height: 120 }
+const MINI_SIZE  = { width: 380, height: 160 } // outer size: includes the ~28px title bar
 
 let win
 let fullBounds = null // window bounds to restore when leaving mini mode

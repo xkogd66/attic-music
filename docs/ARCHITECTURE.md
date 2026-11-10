@@ -143,7 +143,10 @@ Auth-guarded SPA routes:
   `minimal` (**mini-player mode**) persisted to `localStorage.attic_ui_minimal`
   via `setMinimal()`/`toggleMinimal()`. Read by `App.vue` (unmounts the sidebar
   and views) and `Player.vue` (renders `MiniWindow`, skips the mobile
-  `MiniPlayer`/`FullPlayer`/`BottomNav`).
+  `MiniPlayer`/`FullPlayer`/`BottomNav`). Inside the Electron wrapper
+  (`window.attic` present) the saved flag is ignored on launch, so the app
+  always starts in full mode; `setMinimal()` also calls `window.attic.setMini`
+  to resize/float the window.
 
 
 ### 3.6 Views
