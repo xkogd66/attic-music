@@ -1,8 +1,13 @@
-do not assume anything. don't brute force running commands. ask questions.
+
+
+# Project guidance
+
+## gather context before acting  
+
+Never look for evidence in the code unless explicitely told to do so.do not assume anything. don't brute force running commands. ask questions.
 
 before working on any feature, read `README.md` and `docs/ARCHITECTURE.md` —
-they document every feature and the files that implement it. find code from the
-docs, not from git history; never ask to run git to locate a feature's files.
+they document every feature and the files that implement it. find code and architecture from the docs or by asking questions, not from analysing the code (unless explicitely told to) and not from git history; never ask to run git to locate a feature's files.
 
 never compile or build anything to test or verify changes — not npm run build/dev/preview, not `go build`/`go vet`, not `docker build`, not any other compiler/linter invocation, including via a container (e.g. the artist-images `docker run golang:... go build` command documented below is for the user to run, not Claude). This applies to every language and every part of this repo. The user will build and test it themselves.
 
