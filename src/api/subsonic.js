@@ -114,12 +114,12 @@ export async function getArtistCoverMap() {
 }
 
 // Returns { artistId: { genres: string[], years: number[] } } by scanning all albums.
-// Pages the whole album list (several sequential 500-album requests), so the
-// result is cached for the session and shared by concurrent callers; a failed
-// run is dropped so the next call retries.
+// Pages the whole album list, so the result is cached for the session and shared
+// by concurrent callers; a failed run is dropped so the next call retries.
 // ponytail: never invalidated — a reload refreshes it. Add a bust if tag edits
 // need the filters to update immediately.
 let genreMapPromise = null
+const BATCH = 6 // album-list pages requested at once (see fetchArtistGenreMap)
 export function getArtistGenreMap() {
   genreMapPromise ??= fetchArtistGenreMap().catch(e => { genreMapPromise = null; throw e })
   return genreMapPromise
@@ -127,19 +127,38 @@ export function getArtistGenreMap() {
 
 async function fetchArtistGenreMap() {
   const map = {}
-  let offset = 0
   const size = 500
-  while (true) {
+
+  const page = async (offset) => {
     const data   = await request('getAlbumList2', { type: 'alphabeticalByName', size, offset })
-    const albums = ensureArray(data.albumList2?.album)
+    return ensureArray(data.albumList2?.album)
+  }
+
+  const add = (albums) => {
     for (const album of albums) {
       if (!album.artistId) continue
       if (!map[album.artistId]) map[album.artistId] = { genres: [], years: [] }
       if (album.genre && !map[album.artistId].genres.includes(album.genre)) map[album.artistId].genres.push(album.genre)
       if (album.year  && !map[album.artistId].years.includes(album.year))   map[album.artistId].years.push(album.year)
     }
-    if (albums.length < size) break
-    offset += size
+  }
+
+  // First page tells us whether there is more to fetch. It is the only
+  // sequential step: a library of N albums costs 1 + ceil((N-1)/size) requests
+  // but they all fly at once, instead of ~1.6s each down a serial loop (which
+  // left the filters blank for ~27s on a large library).
+  const first = await page(0)
+  add(first)
+  if (first.length < size) return map
+
+  let offset = size
+  while (true) {
+    const batch = Array.from({ length: BATCH }, (_, i) => offset + i * size)
+    const pages = await Promise.all(batch.map(page))
+    for (const albums of pages) add(albums)
+    // A short page is the last one: anything past it is past the end.
+    if (pages.some(albums => albums.length < size)) break
+    offset += BATCH * size
   }
   return map
 }

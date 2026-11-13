@@ -21,14 +21,6 @@
       <!-- PLAYER (handles desktop footer + mobile mini/full/bottomnav internally) -->
       <Player />
 
-      <!-- TEMP DEBUG: remove once the filter bug is found -->
-      <div class="fixed top-0 left-0 z-[9999] max-w-[100vw] px-1 py-0.5 text-[10px] leading-tight bg-yellow-300 text-black font-mono break-all">
-        DBG route={{ route.name }} filterScope={{ filterScope }} showFilters={{ !!filterScope }}
-        | filters.scope={{ filters.scope }} opts.scope={{ filters.opts.scope }}
-        g={{ filters.opts.genres.length }} y={{ filters.opts.years.length }}
-        | v{{ buildTag }}
-      </div>
-
 
     </template>
 
@@ -53,10 +45,6 @@ const filters = useFiltersStore()
 const route  = useRoute()
 const router = useRouter()
 const ready  = ref(false)
-
-// TEMP DEBUG: bump on every deploy so the on-screen line proves which build is
-// running. Remove with the debug overlays.
-const buildTag = 'DEBUG-1'
 
 // What the sidebar's genre/year dropdowns filter. They are hidden everywhere
 // else (Sidebar Home/Playlists/Tools/Search have nothing to filter).
