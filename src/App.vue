@@ -7,7 +7,7 @@
 
       <!-- DESKTOP: sidebar + content (not mounted in mini-player mode) -->
       <div v-if="!ui.minimal" class="hidden md:flex flex-1 overflow-hidden">
-        <SideBar />
+        <SideBar :show-filters="!!filterScope" />
         <main class="flex-1 flex flex-col overflow-hidden">
           <RouterView />
         </main>
@@ -29,9 +29,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useConfigStore } from './stores/config'
+import { useFiltersStore } from './stores/filters'
 import SideBar from './components/SideBar.vue'
 import Player  from './components/Player.vue'
 import { useUiStore } from './stores/ui'
@@ -39,8 +40,29 @@ import { ping } from './api/subsonic'
 
 const config = useConfigStore()
 const ui     = useUiStore()
+const filters = useFiltersStore()
+const route  = useRoute()
 const router = useRouter()
 const ready  = ref(false)
+
+// What the sidebar's genre/year dropdowns filter. They are hidden everywhere
+// else (Sidebar Home/Playlists/Tools/Search have nothing to filter).
+const FILTER_SCOPES = {
+  artists:     'artists',
+  'artist-detail': 'artists',
+  albums:      'albums',
+  'album-detail':  'albums',
+}
+const filterScope = ref(null)
+watch(
+  () => route.name,
+  (name) => {
+    filterScope.value = FILTER_SCOPES[name] ?? null
+    if (filterScope.value) filters.setScope(filterScope.value)
+  },
+  { immediate: true }
+)
+
 
 // Electron only: log in silently from the credentials remembered in the
 // Keychain-backed store. Nothing remembered, or the ping fails (offline, changed

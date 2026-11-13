@@ -4,8 +4,14 @@
     <!-- ALBUM LIST -->
     <template v-if="!currentAlbum">
       <div class="px-4 md:px-6 py-3 md:py-6 border-b border-stone-200 bg-white flex-shrink-0">
-        <h1 class="font-serif hidden md:block text-3xl font-semibold mb-3">Albums</h1>
-        <div v-if="albums.length" class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-baseline gap-3 flex-wrap mb-3">
+          <h1 class="font-serif hidden md:block text-3xl font-semibold">Albums</h1>
+          <span v-if="filterGenre || filterYear" class="text-sm text-stone-600">
+            {{ filterGenre || 'All genres' }}<template v-if="filterYear"> · {{ filterYear }}</template>
+            <button class="text-amber-700 hover:underline" @click="filters.clear()">Clear</button>
+          </span>
+        </div>
+        <div v-if="!currentAlbum" class="flex items-center gap-2 flex-wrap">
           <input
             v-model="albumQuery"
             type="search"
@@ -13,56 +19,55 @@
             class="flex-1 min-w-0 text-sm bg-stone-100 rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-amber-700 md:hidden"
           />
 
-          <!-- Genre -->
-          <div v-if="distinctGenres.length" class="relative">
-            <div v-if="showGenreDropdown" class="fixed inset-0 z-10" @click="showGenreDropdown = false"></div>
-            <button
-              class="relative z-20 text-xs border px-2.5 py-1.5 rounded transition-all"
-              :class="filterGenre ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
-              @click="showGenreDropdown = !showGenreDropdown; showYearDropdown = false"
-            >{{ filterGenre || 'Genre' }} ▾</button>
-            <div v-if="showGenreDropdown" class="absolute top-full left-0 mt-1 bg-white border border-stone-200 shadow-md rounded z-20 min-w-[130px] max-h-60 overflow-y-auto">
-              <button
-                class="block w-full text-left px-3 py-1.5 text-xs hover:bg-stone-50 transition-colors"
-                :class="!filterGenre ? 'text-amber-700 font-medium' : 'text-stone-600'"
-                @click="filterGenre = null; showGenreDropdown = false"
-              >All genres</button>
-              <button
-                v-for="g in distinctGenres" :key="g"
-                class="block w-full text-left px-3 py-1.5 text-xs hover:bg-stone-50 transition-colors"
-                :class="filterGenre === g ? 'text-amber-700 font-medium' : 'text-stone-600'"
-                @click="filterGenre = g; showGenreDropdown = false"
-              >{{ g }}</button>
-            </div>
-          </div>
+          <!-- Genre / Year. Desktop: dropdowns in the sidebar (LibraryFilters).
+               Small screens: native pickers — one tap, OS wheel on iOS, a
+               searchable list on Android. -->
+          <template v-if="distinctGenres.length || distinctYears.length">
+            <label
+              v-if="distinctGenres.length"
+              class="relative flex-1 md:flex-none min-w-0 md:w-44 text-xs border rounded transition-colors md:hidden"
+              :class="filterGenre ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600'"
+            >
+              <span class="pointer-events-none flex items-center justify-between gap-1 px-2 py-1.5 truncate">
+                <span class="truncate">{{ filterGenre || 'All genres' }}</span>
+                <span aria-hidden="true">▾</span>
+              </span>
+              <select
+                :value="filters.genre || ''"
+                aria-label="Filter albums by genre"
+                class="absolute inset-0 w-full h-full appearance-none opacity-0 cursor-pointer"
+                @change="filters.setGenre($event.target.value)"
+              >
+                <option value="">All genres</option>
+                <option v-for="g in distinctGenres" :key="g" :value="g">{{ g }}</option>
+              </select>
+            </label>
 
-          <!-- Year -->
-          <div v-if="distinctYears.length" class="relative">
-            <div v-if="showYearDropdown" class="fixed inset-0 z-10" @click="showYearDropdown = false"></div>
-            <button
-              class="relative z-20 text-xs border px-2.5 py-1.5 rounded transition-all"
-              :class="filterYear ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
-              @click="showYearDropdown = !showYearDropdown; showGenreDropdown = false"
-            >{{ filterYear || 'Year' }} ▾</button>
-            <div v-if="showYearDropdown" class="absolute top-full left-0 mt-1 bg-white border border-stone-200 shadow-md rounded z-20 min-w-[80px] max-h-60 overflow-y-auto">
-              <button
-                class="block w-full text-left px-3 py-1.5 text-xs hover:bg-stone-50 transition-colors"
-                :class="!filterYear ? 'text-amber-700 font-medium' : 'text-stone-600'"
-                @click="filterYear = null; showYearDropdown = false"
-              >All years</button>
-              <button
-                v-for="y in distinctYears" :key="y"
-                class="block w-full text-left px-3 py-1.5 text-xs hover:bg-stone-50 transition-colors"
-                :class="filterYear === y ? 'text-amber-700 font-medium' : 'text-stone-600'"
-                @click="filterYear = y; showYearDropdown = false"
-              >{{ y }}</button>
-            </div>
-          </div>
+            <label
+              v-if="distinctYears.length"
+              class="relative flex-1 md:flex-none min-w-0 md:w-24 text-xs border rounded transition-colors md:hidden"
+              :class="filterYear ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600'"
+            >
+              <span class="pointer-events-none flex items-center justify-between gap-1 px-2 py-1.5 truncate">
+                <span class="truncate">{{ filterYear || 'All years' }}</span>
+                <span aria-hidden="true">▾</span>
+              </span>
+              <select
+                :value="filters.year ?? ''"
+                aria-label="Filter albums by year"
+                class="absolute inset-0 w-full h-full appearance-none opacity-0 cursor-pointer"
+                @change="filters.setYear($event.target.value)"
+              >
+                <option value="">All years</option>
+                <option v-for="y in distinctYears" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </label>
+          </template>
 
           <button
             v-if="filterGenre || filterYear || albumQuery"
             class="text-xs text-stone-600 hover:text-amber-700 transition-colors"
-            @click="filterGenre = null; filterYear = null; albumQuery = ''"
+            @click="filters.clear(); albumQuery = ''"
           >Clear</button>
         </div>
 
@@ -141,6 +146,7 @@
             <span class="text-4xl">💿</span>
             <span class="font-serif text-lg">No albums found</span>
           </div>
+          <div v-else-if="!filteredAlbums.length && (filterGenre || filterYear) && !distinctGenres.length && !distinctYears.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading filters…</div>
           <div v-else-if="!filteredAlbums.length" class="flex items-center justify-center py-24 text-stone-600 text-sm">No albums match the filter.</div>
           <div v-else class="grid gap-2 md:gap-4 grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(100px,1fr))]">
             <div
@@ -383,6 +389,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
+import { useFiltersStore } from '../stores/filters'
 import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, getArtists } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
@@ -589,11 +596,12 @@ async function saveTrackEdits() {
   closeTrackEditor()
 }
 
-const filterGenre       = ref(null)
-const filterYear        = ref(null)
+// Genre/year filter shared with the desktop sidebar dropdowns
+// (LibraryFilters.vue) — see src/stores/filters.js.
+const filters           = useFiltersStore()
+const filterGenre       = computed(() => filters.genre)
+const filterYear        = computed(() => filters.year)
 const albumQuery        = ref('')
-const showGenreDropdown = ref(false)
-const showYearDropdown  = ref(false)
 
 const distinctGenres = computed(() => {
   const genres = [...new Set(albums.value.map(a => a.genre).filter(Boolean))]
@@ -605,6 +613,13 @@ const distinctYears = computed(() => {
   return years.sort((a, b) => b - a)
 })
 
+// The sidebar's dropdowns list what has been paged in so far. A sort change
+// resets the pages, so also publish after each page; otherwise the lists would
+// be checked against a gonic snapshot they don't describe any more.
+watch([distinctGenres, distinctYears], ([genres, years]) => {
+  if (genres.length || years.length) filters.publish('albums', genres, years)
+})
+
 const filteredAlbums = computed(() => {
   return albums.value.filter(a => {
     if (filterGenre.value && a.genre !== filterGenre.value) return false
@@ -612,6 +627,14 @@ const filteredAlbums = computed(() => {
     if (albumQuery.value  && !a.name.toLowerCase().includes(albumQuery.value.toLowerCase())) return false
     return true
   })
+})
+
+// Don't let a genre/year filter hide the rest of a still-loading library: if
+// the filter matches nothing among the pages fetched so far, keep paging until
+// it does or the list is exhausted. (Filters run over what has been paged in,
+// like the search box — the whole library is only there once paging is done.)
+watch([filteredAlbums, filterGenre, filterYear], ([list, g, y]) => {
+  if ((g || y) && !list.length && !allLoaded.value) fillUntilOffscreen()
 })
 
 const sentinel   = ref(null)
@@ -653,7 +676,12 @@ async function loadAlbums() {
   await loadMore()
 }
 
-watch(sort, () => loadAlbums())
+watch(sort, () => {
+  // The new ordering is a fresh gonic snapshot: drop the old genre/year lists
+  // so the sidebar stops checking filters against an ordering that is gone.
+  filters.publish('albums', [], [])
+  loadAlbums()
+})
 
 async function loadMore() {
   if (loadingMore.value || allLoaded.value) return
@@ -696,6 +724,10 @@ watch(sentinel, el => {
 })
 
 async function openAlbum(album) {
+  // A filter can refresh the list underneath a card while it is being clicked
+  // (the carousels are not filtered). Ignore a card that is no longer listed —
+  // otherwise the URL changes to an album the sidebar no longer shows.
+  if (album.id && !albums.value.some(a => a.id === album.id)) return
   loading.value = true
   albumDetailCoverState.value = 'loading'
   showLocation.value = false
@@ -746,6 +778,8 @@ function closeAlbum() {
 }
 
 onMounted(async () => {
+  // The sidebar's filters apply to this page (App.vue sets the scope too).
+  filters.setScope('albums')
   loadRecent()
   await loadAlbums()
   if (route.params.id) {

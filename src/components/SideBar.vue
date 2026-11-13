@@ -10,7 +10,7 @@
     </div>
 
     <!-- NAV -->
-    <nav class="flex-shrink-0 p-4">
+    <nav class="flex-shrink-0 p-4 pb-2">
       <div class="flex items-center justify-between px-2 py-2">
         <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Library</span>
         <button
@@ -115,6 +115,10 @@
       >No results</div>
     </div>
 
+    <!-- GENRE / YEAR FILTERS (desktop only — mobile has them in each view;
+         shown only on the Artists/Albums pages, which is what they filter) -->
+    <LibraryFilters v-if="showFilters" />
+
     <!-- SCROBBLES -->
     <RecentPlays v-if="config.lastfmUser && config.lastfmKey" />
 
@@ -148,6 +152,7 @@ import { usePlayerStore } from '../stores/player'
 import { useUiStore } from '../stores/ui'
 import { search, startScan, getScanStatus } from '../api/subsonic'
 import RecentPlays from './RecentPlays.vue'
+import LibraryFilters from './LibraryFilters.vue'
 import AskAiModal from './AskAiModal.vue'
 import AlbumRating from './AlbumRating.vue'
 import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose } from 'lucide-vue-next'
@@ -157,6 +162,9 @@ const player = usePlayerStore()
 const ui     = useUiStore()
 const route  = useRoute()
 const router = useRouter()
+
+// Set by App.vue for the Artists/Albums pages (and their detail views).
+defineProps({ showFilters: { type: Boolean, default: false } })
 
 const navItems = [
   { to: '/home',      icon: House,     label: 'Home'      },

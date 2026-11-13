@@ -9,8 +9,8 @@
     "dist": "electron-builder --mac"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "me.ekskog.attic-music",
