@@ -90,6 +90,12 @@
           <button type="button" class="text-amber-700 hover:underline" @click="f.clear()">Clear</button>
         </div>
       </template>
+
+      <!-- TEMP DEBUG: remove once the filter bug is found -->
+      <div class="mt-1 px-2 py-1 text-[10px] leading-tight bg-yellow-100 border border-yellow-400 text-black break-all">
+        DBG sidebar: scope={{ f.scope }} published={{ f.isPublished(f.scope) }}
+        opts.scope={{ f.opts.scope }} g={{ f.opts.genres.length }} y={{ f.opts.years.length }}
+      </div>
     </div>
   </div>
 </template>

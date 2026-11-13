@@ -4,6 +4,12 @@
     <!-- ALBUM LIST -->
     <template v-if="!currentAlbum">
       <div class="px-4 md:px-6 py-3 md:py-6 border-b border-stone-200 bg-white flex-shrink-0">
+        <!-- TEMP DEBUG: remove once the filter bug is found -->
+        <div class="hidden md:block mb-2 px-1 py-0.5 text-[10px] font-mono leading-tight bg-yellow-100 border border-yellow-400 text-black break-all">
+          DBG albums: albums={{ albums.length }} distinctGenres={{ distinctGenres.length }}
+          distinctYears={{ distinctYears.length }} storePublished={{ filters.isPublished('albums') }}
+          storeG={{ filters.opts.genres.length }} storeY={{ filters.opts.years.length }}
+        </div>
         <div class="flex items-baseline gap-3 flex-wrap mb-3">
           <h1 class="font-serif hidden md:block text-3xl font-semibold">Albums</h1>
           <span v-if="filterGenre || filterYear" class="text-sm text-stone-600">

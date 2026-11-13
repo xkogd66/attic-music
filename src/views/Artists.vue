@@ -7,6 +7,12 @@
       <!-- ── DESKTOP HEADER (letter nav; genre/year filters are in the sidebar) ── -->
       <div class="hidden md:block border-b border-stone-200 bg-white flex-shrink-0">
         <div class="px-8 pt-7 pb-3">
+          <!-- TEMP DEBUG: remove once the filter bug is found -->
+          <div class="mb-2 px-1 py-0.5 text-[10px] font-mono leading-tight bg-yellow-100 border border-yellow-400 text-black break-all">
+            DBG artists: genreMap={{ Object.keys(artistGenreMap).length }} distinctGenres={{ distinctGenres.length }}
+            distinctYears={{ distinctYears.length }} storePublished={{ filters.isPublished('artists') }}
+            storeG={{ filters.opts.genres.length }} storeY={{ filters.opts.years.length }}
+          </div>
           <div class="flex items-baseline gap-3 flex-wrap mb-3">
             <h1 class="font-serif text-4xl font-semibold">Artists</h1>
             <span v-if="filterGenre || filterYear" class="text-sm text-stone-600">
@@ -1016,6 +1022,7 @@ onMounted(async () => {
   const [, newestAlbums] = await Promise.all([loadArtists(), getNewestAlbums(100)])
   // After the grid is up, so its ~14 paged album requests don't compete with it.
   getArtistGenreMap().then(m => { artistGenreMap.value = m }).catch(() => {}) // filters just stay empty
+  // TEMP DEBUG: remove with the overlays in App.vue / LibraryFilters.vue.
   const seen = new Set()
   const artists = []
   for (const album of newestAlbums) {
