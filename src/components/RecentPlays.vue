@@ -1,19 +1,16 @@
 <template>
-  <div class="border-t border-stone-200 flex flex-col min-h-0" :class="open ? 'flex-1' : 'flex-shrink-0'">
+  <div class="flex flex-col min-h-0" :class="open ? 'flex-1' : 'flex-shrink-0'">
     <div
-      class="flex items-center justify-between px-4 py-3 cursor-pointer select-none flex-shrink-0"
+      class="flex items-center justify-between px-6 pb-1.5 cursor-pointer select-none flex-shrink-0"
       @click="open = !open"
     >
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recent plays</span>
-        <span class="text-xs text-amber-700 font-medium">last.fm</span>
-      </div>
+      <span class="text-xs font-medium uppercase tracking-widest text-stone-600">Recent plays</span>
       <span
         class="text-stone-500 text-sm transition-transform duration-200 inline-block leading-none"
         :class="{ 'rotate-90': open }"
       >›</span>
     </div>
-    <div v-if="open" class="overflow-y-auto flex-1 space-y-1 px-2 pb-4">
+    <div v-if="open" class="overflow-y-auto flex-1 space-y-1 px-4 pb-4">
       <div v-if="!scrobbles.length" class="text-xs text-stone-600 px-2">Nothing yet…</div>
       <!-- Only the album is clickable: a scrobble is text only, so a click looks
            the album up in the library first (findLibraryAlbum), then opens it. -->

@@ -112,11 +112,12 @@ Auth-guarded SPA routes:
   `search` (`search3`), plus URL builders `coverUrl`/`streamUrl`.
 - **`chat.js`** — `askAI(message, provider)` → `POST /chat-api/chat`;
   `fetchProviders()` → `GET /chat-api/providers`.
-- **`lastfm.js`** — polls `user.getrecenttracks`; marks *permanent* errors (bad
-  key/forbidden) so the poller can stop. `findLibrarySong({artist, track})`
-  resolves a scrobble (text only, no Subsonic id) to a library song via
-  `search3` — exact artist+title preferred, else the first song hit — memoized
-  per artist+track for the session (failures are not cached).
+- **`lastfm.js`** — polls `user.getrecenttracks` (track, artist, album,
+  now-playing, time); marks *permanent* errors (bad key/forbidden) so the
+  poller can stop. `findLibraryAlbum({artist, album})` resolves a scrobble's
+  album to a library album via `search3` on the album name (name + artist
+  match preferred, name-only fallback for compilations, never a loose first
+  hit); memoized per session, failures not cached.
 - **`lyrics.js`** — LRCLIB (`lrclib.net/api/get`) with an in-memory cache keyed
   by track id, LRC parsing into `[{time, text}]`, and manual lyrics stored in
   `localStorage` (`attic_lyrics_<id>`).
@@ -158,6 +159,12 @@ Auth-guarded SPA routes:
   (`window.attic` present) the saved flag is ignored on launch, so the app
   always starts in full mode; `setMinimal()` also calls `window.attic.setMini`
   to resize/float the window.
+- **`filters`** (`src/stores/filters.js`) — genre/year filter state shared by
+  the views (mobile header dropdowns) and the desktop sidebar
+  (`LibraryFilters.vue`). `App.vue` sets `scope` (`artists`/`albums`) from the
+  route; each view `publish()`es its option lists; a picked value the active
+  scope has no option for is dropped. In memory only — a reload starts
+  unfiltered.
 
 
 ### 3.6 Views
@@ -198,7 +205,10 @@ Auth-guarded SPA routes:
   - Artist detail hero has a click-to-change circular avatar (opens the same
     modal in avatar mode).
 - **Albums.vue** (~850 lines):
-  - Header filters (genre/year dropdowns), mobile search, **mobile sort chips
+  - Genre/year filters: mobile header dropdowns, desktop sidebar
+    (`LibraryFilters.vue`), both via the `filters` store. Options and results
+    cover only the albums paged in so far; a filter matching nothing yet keeps
+    paging. Mobile search, **mobile sort chips
     whose ids ARE the Subsonic `getAlbumList2` types**
     (`alphabeticalByName`/`newest`/`random`) — changing sort re-pages from the
     server (no client-side re-sorting). `random` deliberately loads one page
@@ -262,7 +272,8 @@ Auth-guarded SPA routes:
   Search.
 - **`SideBar.vue`** (desktop) — header w/ server name, nav (with a **library
   rescan** button that calls `startScan` and polls `getScanStatus` every 30s),
-  debounced search dropdown, "✨ Ask AI" button opening `AskAiModal`, "Recent
+  debounced search dropdown, "✨ Ask AI" button opening `AskAiModal`,
+  `LibraryFilters` (only on the Artists/Albums routes), "Recent
   plays" (Last.fm scrobbles polled every 30s), sign-out, and the **mini-player
   toggle** (`PanelLeftClose`) that sets `ui.minimal`, replacing the whole app
   with `MiniWindow`.
@@ -278,13 +289,16 @@ Auth-guarded SPA routes:
   `provide`/`inject` for accordion behavior (one open child per level); fetches
   `getDirectory` lazily. **Note: no view currently mounts it** (the README's
   `Folders.vue` no longer exists) — currently dead-but-maintained code.
+- **`LibraryFilters.vue`** (desktop sidebar) — Genre and Year dropdowns over the
+  `filters` store, a single `Clear` pill next to the FILTER heading, and a
+  one-line "Albums in X from Y" note while a filter is active. Shows "Filters
+  load with the library…" until the active view has published its options.
 - **`RecentPlays.vue`** — collapsible Last.fm recent-scrobbles panel; stops
-  polling on permanent errors. Each row is a **button that resumes the play**:
-  it calls `findLibrarySong()` (`api/lastfm.js`) to turn the text-only scrobble
-  into a library song, then `player.playTrack(song, [song], 0)` (the same
-  single-track queue as a sidebar search result). Resolved `id`s and
-  "not in library" answers are carried across the 30s polls, so the highlight
-  on the playing track doesn't flicker; rows are disabled while a lookup runs.
+  polling on permanent errors. Each row shows track, artist and album; **only
+  the album name is a button** — it resolves via `findLibraryAlbum()` and
+  pushes `album-detail`, or marks the row "not in library". "Not in library"
+  answers are carried across the 30s polls; album buttons are disabled while a
+  lookup runs.
 
 ### 3.8 Image-fallback chains (an important design quirk)
 
@@ -546,8 +560,9 @@ level.
     (`md5(password + salt)` per request), client ids `chat-server` /
     `gonic-mcp`.
 - **Scrobbling**: done via Subsonic's `scrobble` endpoint (server-side) at the
-  halfway threshold, *plus* the sidebar reads the user's Last.fm profile
-  directly with the API key.
+  halfway threshold — the app sends only the song id; gonic submits to Last.fm
+  with the file's tags, album included (confirmed on Last.fm 2026-11-14) —
+  *plus* the sidebar reads the user's Last.fm profile directly with the API key.
 
 ## 9. Notable conventions & quirks
 

@@ -53,6 +53,7 @@ src/
     config.js     # user config (server URL, credentials, lastfm)
     player.js     # playback state, queue, shuffle/repeat
     playlist.js   # playlist list cache + addTrack action
+    filters.js    # genre/year filter state shared by the views and the sidebar
   router/
     index.js      # route definitions + auth guards
   views/
@@ -69,11 +70,12 @@ src/
     MiniPlayer.vue   # mobile mini player
     FullPlayer.vue   # mobile full-screen player
     BottomNav.vue    # mobile bottom nav (6 tabs)
-    SideBar.vue      # desktop sidebar (nav + search + last.fm scrobbles)
+    SideBar.vue      # desktop sidebar (nav + search + filters + last.fm scrobbles)
+    LibraryFilters.vue # desktop genre/year filter dropdowns in the sidebar
+    RecentPlays.vue  # last.fm recent scrobbles; album name opens the album
     AskAiModal.vue   # desktop Ask AI overlay (opened from the sidebar ✨ button)
     FolderNode.vue   # expandable folder tree node
     TrackItem.vue    # track list item
-    RecentPlays.vue  # sidebar last.fm recent plays (click a row to resume it)
     ArtistCard.vue   # artist grid card with circular avatar
   App.vue           # root layout + auth check
   main.js           # entry point
@@ -278,7 +280,12 @@ src/
 - Desktop: unchanged — letter nav + genre/year filters + expandable letter groups + carousels
 
 ### Albums Page (Albums.vue)
-- Genre and year filter dropdowns in the header (both mobile and desktop)
+- Genre and year filters. **Mobile**: native dropdowns in the page header.
+  **Desktop**: dropdowns in the sidebar (`LibraryFilters.vue`), shown only on the
+  Artists/Albums routes, with a single `Clear` pill next to the FILTER heading.
+  Both write the same `filters` store (`src/stores/filters.js`)
+- The filter options and results cover only the albums paged in so far (pages
+  of 100); picking a filter that matches nothing yet keeps paging until it does
 - **Mobile sort chips**: `A–Z` | `Added` | `Discover`. Their ids *are* the
   `getAlbumList2` types, so changing sort re-pages from the server (`loadAlbums()`
   resets and refetches) rather than re-sorting on the client. Infinite scroll keeps
@@ -297,13 +304,13 @@ src/
 ### Last.fm
 - Optional; polls `https://ws.audioscrobbler.com/2.0/` every 30 seconds to show recent scrobbles in the sidebar
 - Requires `LASTFM_API_KEY` (injected at runtime, not build time)
-- **Scrobbles are clickable** (`RecentPlays.vue`) and resume the play in the
-  library: scrobbles carry no Subsonic id, so `findLibrarySong()` resolves the
-  text (artist + track) with a `search3` lookup — preferring an exact
-  artist+title match, else the first song result — then calls
-  `player.playTrack(song, [song], 0)`. Matches are cached for the session;
-  a scrobble with no library match shows *"not in library"*. The row of the
-  currently playing track is highlighted.
+- The app never scrobbles to Last.fm itself: it calls gonic's Subsonic `scrobble`
+  with the song id, and gonic submits it with the file's tags (album included)
+- Recent plays (`RecentPlays.vue`) shows track, artist and album; **only the album
+  name is clickable**. A scrobble carries no Subsonic id, so the click resolves it
+  with `findLibraryAlbum()` (`src/api/lastfm.js`: `search3` on the album name,
+  prefer name + artist match, fall back to name-only for compilations) and opens
+  the `album-detail` route. No match → "not in library"
 
 ### Search (SideBar + Search.vue)
 - Desktop search is in the sidebar (`SideBar.vue`); results show Artists, Albums, and Songs

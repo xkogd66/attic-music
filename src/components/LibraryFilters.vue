@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 pb-2 flex-shrink-0">
+  <div class="px-4 pb-4 flex-shrink-0">
     <!-- Mobile: each view puts its own compact dropdowns in its header
          (Artists.vue / Albums.vue), right next to the grid they filter. -->
     <div class="hidden md:block">
@@ -27,8 +27,8 @@
             <div v-if="openGenre" class="fixed inset-0 z-30" @click="openGenre = false"></div>
             <button
               type="button"
-              class="relative z-40 w-full text-left text-xs border px-2.5 py-1.5 rounded transition-all truncate"
-              :class="f.genre ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
+              class="relative z-40 w-full text-left text-xs px-2.5 py-1.5 rounded transition-colors truncate"
+              :class="f.genre ? 'text-amber-700 bg-amber-50' : 'text-stone-600 bg-stone-50 hover:text-amber-700 hover:bg-amber-50'"
               @click="openGenre = !openGenre; openYear = false"
             >{{ f.genre || 'Genre' }} ▾</button>
             <div v-if="openGenre" class="absolute bottom-full left-0 mb-1 bg-white border border-stone-200 shadow-md rounded z-40 w-44 max-h-60 overflow-y-auto">
@@ -45,8 +45,8 @@
             <div v-if="openYear" class="fixed inset-0 z-30" @click="openYear = false"></div>
             <button
               type="button"
-              class="relative z-40 w-full text-left text-xs border px-2.5 py-1.5 rounded transition-all truncate"
-              :class="f.year ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50'"
+              class="relative z-40 w-full text-left text-xs px-2.5 py-1.5 rounded transition-colors truncate"
+              :class="f.year ? 'text-amber-700 bg-amber-50' : 'text-stone-600 bg-stone-50 hover:text-amber-700 hover:bg-amber-50'"
               @click="openYear = !openYear; openGenre = false"
             >{{ f.year || 'Year' }} ▾</button>
             <div v-if="openYear" class="absolute bottom-full right-0 mb-1 bg-white border border-stone-200 shadow-md rounded z-40 w-32 max-h-60 overflow-y-auto">
