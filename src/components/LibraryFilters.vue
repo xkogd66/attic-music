@@ -8,7 +8,7 @@
         <button
           v-if="f.genre || f.year"
           type="button"
-          class="text-xs text-stone-600 hover:text-amber-700 transition-colors"
+          class="text-xs px-2 py-0.5 rounded-full border border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
           @click="f.clear()"
         >Clear</button>
       </div>
@@ -69,7 +69,6 @@
              never looks like a bug. -->
         <div v-if="f.genre || f.year" class="mt-1.5 px-1 text-[11px] text-stone-500 leading-snug flex flex-wrap items-center gap-x-1">
           <span>{{ f.scope === 'albums' ? 'Albums' : 'Artists' }}<template v-if="f.genre"> in {{ f.genre }}</template><template v-if="f.year"> from {{ f.year }}</template></span>
-          <button type="button" class="text-amber-700 hover:underline" @click="f.clear()">Clear</button>
         </div>
       </template>
     </div>

@@ -8,7 +8,6 @@
           <h1 class="font-serif hidden md:block text-3xl font-semibold">Albums</h1>
           <span v-if="filterGenre || filterYear" class="text-sm text-stone-600">
             {{ filterGenre || 'All genres' }}<template v-if="filterYear"> · {{ filterYear }}</template>
-            <button class="text-amber-700 hover:underline" @click="filters.clear()">Clear</button>
           </span>
         </div>
         <div v-if="!currentAlbum" class="flex items-center gap-2 flex-wrap">
@@ -66,7 +65,7 @@
 
           <button
             v-if="filterGenre || filterYear || albumQuery"
-            class="text-xs text-stone-600 hover:text-amber-700 transition-colors"
+            class="text-xs text-stone-600 hover:text-amber-700 transition-colors md:hidden"
             @click="filters.clear(); albumQuery = ''"
           >Clear</button>
         </div>
