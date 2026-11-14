@@ -65,24 +65,6 @@
           </div>
         </div>
 
-        <!-- Recent years as one-click chips; the dropdown above has the rest. -->
-        <div v-if="recentYears.length" class="flex flex-wrap gap-1 mt-1.5">
-          <button
-            v-for="y in recentYears" :key="y"
-            type="button"
-            class="text-[11px] px-1.5 py-0.5 rounded border transition-all tabular-nums"
-            :class="f.year === y ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700'"
-            @click="f.year === y ? f.clearYear() : f.setYear(y)"
-          >{{ y }}</button>
-          <button
-            v-if="options.years.length > f.YEARS_PREF"
-            type="button"
-            class="text-[11px] px-1.5 py-0.5 rounded border transition-all"
-            :class="f.yearsExpanded ? 'border-amber-700 text-amber-700 bg-amber-50' : 'border-stone-200 text-stone-600 hover:border-amber-700 hover:text-amber-700'"
-            @click="f.yearsExpanded = !f.yearsExpanded"
-          >{{ f.yearsExpanded ? 'Fewer' : '+ ' + (options.years.length - f.YEARS_PREF) + ' more' }}</button>
-        </div>
-
         <!-- Say what is being filtered, so an emptier-than-expected library
              never looks like a bug. -->
         <div v-if="f.genre || f.year" class="mt-1.5 px-1 text-[11px] text-stone-500 leading-snug flex flex-wrap items-center gap-x-1">
@@ -110,9 +92,5 @@ const EMPTY = { scope: null, genres: [], years: [] }
 // otherwise the previous scope's genres would linger on this page for the
 // moment before the new view's album scan finishes.
 const options = computed(() => (f.isPublished(f.scope) ? f.opts : EMPTY))
-
-const recentYears = computed(() =>
-  f.yearsExpanded ? options.value.years : options.value.years.slice(0, f.YEARS_PREF)
-)
 </script>
 
