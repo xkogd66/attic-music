@@ -723,10 +723,6 @@ watch(sentinel, el => {
 })
 
 async function openAlbum(album) {
-  // A filter can refresh the list underneath a card while it is being clicked
-  // (the carousels are not filtered). Ignore a card that is no longer listed —
-  // otherwise the URL changes to an album the sidebar no longer shows.
-  if (album.id && !albums.value.some(a => a.id === album.id)) return
   loading.value = true
   albumDetailCoverState.value = 'loading'
   showLocation.value = false
