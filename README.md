@@ -73,6 +73,7 @@ src/
     AskAiModal.vue   # desktop Ask AI overlay (opened from the sidebar ✨ button)
     FolderNode.vue   # expandable folder tree node
     TrackItem.vue    # track list item
+    RecentPlays.vue  # sidebar last.fm recent plays (click a row to resume it)
     ArtistCard.vue   # artist grid card with circular avatar
   App.vue           # root layout + auth check
   main.js           # entry point
@@ -296,6 +297,13 @@ src/
 ### Last.fm
 - Optional; polls `https://ws.audioscrobbler.com/2.0/` every 30 seconds to show recent scrobbles in the sidebar
 - Requires `LASTFM_API_KEY` (injected at runtime, not build time)
+- **Scrobbles are clickable** (`RecentPlays.vue`) and resume the play in the
+  library: scrobbles carry no Subsonic id, so `findLibrarySong()` resolves the
+  text (artist + track) with a `search3` lookup — preferring an exact
+  artist+title match, else the first song result — then calls
+  `player.playTrack(song, [song], 0)`. Matches are cached for the session;
+  a scrobble with no library match shows *"not in library"*. The row of the
+  currently playing track is highlighted.
 
 ### Search (SideBar + Search.vue)
 - Desktop search is in the sidebar (`SideBar.vue`); results show Artists, Albums, and Songs

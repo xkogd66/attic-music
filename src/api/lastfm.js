@@ -1,4 +1,5 @@
 import { useConfigStore } from '../stores/config'
+import { search } from './subsonic'
 
 function timeAgo(uts) {
   if (!uts) return ''
@@ -40,4 +41,34 @@ export async function getRecentTracks(limit = 5) {
     nowplaying: t['@attr']?.nowplaying === 'true',
     when:       t.date ? timeAgo(t.date.uts) : '',
   }))
+}
+
+// ── LIBRARY MATCHING ──────────────────────────────────
+// A scrobble is just text (artist/track/album) — it carries no Subsonic id, so
+// it can't be streamed directly. search3 matches loosely, so prefer an exact
+// artist+title hit over its first result (which may be a different take of the
+// same song), and accept the first result only when nothing matches exactly.
+
+const norm = s => (s || '').trim().toLowerCase()
+
+// `${artist}\n${track}` -> Promise<song | null>. Kept for the session so a
+// re-poll of the same scrobbles (every 30s) doesn't re-search them.
+const resolved = new Map()
+
+export function findLibrarySong({ artist, track }) {
+  const key = `${norm(artist)}\n${norm(track)}`
+  if (!resolved.has(key)) {
+    resolved.set(key, (async () => {
+      try {
+        const { songs } = await search([artist, track].filter(Boolean).join(' '))
+        const exact = songs.find(s => norm(s.title) === norm(track) && norm(s.artist) === norm(artist))
+        return exact || songs[0] || null
+      } catch (e) {
+        // Don't cache failures — the next click (or poll) should retry.
+        resolved.delete(key)
+        throw e
+      }
+    })())
+  }
+  return resolved.get(key)
 }

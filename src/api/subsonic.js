@@ -179,6 +179,13 @@ export async function getAlbum(id) {
   }
 }
 
+// Single song by id — used to turn a text-only reference (a Last.fm scrobble,
+// which carries no Subsonic id) back into a playable library track.
+export async function getSong(id) {
+  const data = await request('getSong', { id })
+  return data.song || null
+}
+
 export async function getAlbumPage(size = 100, offset = 0, type = 'alphabeticalByName') {
   const data = await request('getAlbumList2', { type, size, offset })
   return ensureArray(data.albumList2?.album)

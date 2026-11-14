@@ -106,14 +106,17 @@ Auth-guarded SPA routes:
   letter, article-stripping via `sortableName`), `getArtistCoverMap`,
   `getArtistGenreMap` (paginates all albums in 500s; **cached as a promise for
   the session**, and a failed page throws instead of caching a partial map),
-  `getArtist`, `getAlbum`,
+  `getArtist`, `getAlbum`, `getSong` (single song by id),
   `getAlbumPage`/`getNewestAlbums`/`getRandomAlbums` (wrap `getAlbumList2`),
   playlist CRUD, `getArtistInfo2`, `scrobble`, `startScan`/`getScanStatus`,
   `search` (`search3`), plus URL builders `coverUrl`/`streamUrl`.
 - **`chat.js`** — `askAI(message, provider)` → `POST /chat-api/chat`;
   `fetchProviders()` → `GET /chat-api/providers`.
 - **`lastfm.js`** — polls `user.getrecenttracks`; marks *permanent* errors (bad
-  key/forbidden) so the poller can stop.
+  key/forbidden) so the poller can stop. `findLibrarySong({artist, track})`
+  resolves a scrobble (text only, no Subsonic id) to a library song via
+  `search3` — exact artist+title preferred, else the first song hit — memoized
+  per artist+track for the session (failures are not cached).
 - **`lyrics.js`** — LRCLIB (`lrclib.net/api/get`) with an in-memory cache keyed
   by track id, LRC parsing into `[{time, text}]`, and manual lyrics stored in
   `localStorage` (`attic_lyrics_<id>`).
@@ -276,7 +279,12 @@ Auth-guarded SPA routes:
   `getDirectory` lazily. **Note: no view currently mounts it** (the README's
   `Folders.vue` no longer exists) — currently dead-but-maintained code.
 - **`RecentPlays.vue`** — collapsible Last.fm recent-scrobbles panel; stops
-  polling on permanent errors.
+  polling on permanent errors. Each row is a **button that resumes the play**:
+  it calls `findLibrarySong()` (`api/lastfm.js`) to turn the text-only scrobble
+  into a library song, then `player.playTrack(song, [song], 0)` (the same
+  single-track queue as a sidebar search result). Resolved `id`s and
+  "not in library" answers are carried across the 30s polls, so the highlight
+  on the playing track doesn't flicker; rows are disabled while a lookup runs.
 
 ### 3.8 Image-fallback chains (an important design quirk)
 
