@@ -145,9 +145,13 @@
     <!-- FOOTER: sign out · rescan · mini player -->
     <div class="flex-shrink-0 flex items-center px-6 py-4 justify-between">
       <button
-        class="text-stone-600 hover:text-amber-700 transition-colors text-xs"
+        type="button"
+        class="text-stone-600 hover:text-amber-700 transition-colors"
+        title="Sign out"
         @click="logout"
-      >Sign out</button>
+      >
+        <LogOut :size="15" />
+      </button>
 
       <div class="flex items-center gap-3">
         <button
@@ -199,7 +203,7 @@ import RecentPlays from './RecentPlays.vue'
 import LibraryFilters from './LibraryFilters.vue'
 import AskAiModal from './AskAiModal.vue'
 import AlbumRating from './AlbumRating.vue'
-import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose, ChevronsLeft, ChevronsRight, Sun, Moon } from 'lucide-vue-next'
+import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose, ChevronsLeft, ChevronsRight, Sun, Moon, LogOut } from 'lucide-vue-next'
 
 const config = useConfigStore()
 const player = usePlayerStore()
