@@ -52,22 +52,22 @@
           v-model="query"
           type="text"
           placeholder="Search…"
-          class="w-full text-sm pl-2 pr-14 py-1.5 rounded border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
+          class="w-full text-sm pl-2 pr-20 py-1.5 rounded border border-stone-200 bg-stone-50 placeholder-stone-400 focus:outline-none focus:border-amber-400 transition-colors"
           @input="onInput"
           @keydown.escape="clear"
         />
         <button
           v-if="query"
           type="button"
-          class="absolute right-8 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-800 text-xs leading-none"
+          class="absolute right-[4.25rem] top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-800 text-xs leading-none"
           @click="clear"
         >✕</button>
         <button
           type="button"
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-sm leading-none opacity-70 hover:opacity-100 transition-opacity"
+          class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
           title="Ask AI"
           @click="askOpen = true"
-        ><span aria-hidden="true">✨</span><span class="sr-only">Ask AI</span></button>
+        ><span aria-hidden="true">✨</span> Ask</button>
       </form>
 
       <div
