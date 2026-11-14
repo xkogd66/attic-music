@@ -3,6 +3,15 @@
     <div class="px-4 py-3 border-b border-stone-200 bg-white flex-shrink-0 md:hidden flex items-center gap-2">
       <img src="/favicon.svg" alt="" class="w-6 h-6" />
       <span class="font-serif text-lg font-semibold">attic music</span>
+      <button
+        type="button"
+        class="ml-auto p-1 text-stone-600 hover:text-amber-700 transition-colors"
+        :title="ui.dark ? 'Light mode' : 'Dark mode'"
+        @click="ui.toggleDark()"
+      >
+        <Sun v-if="ui.dark" :size="18" />
+        <Moon v-else :size="18" />
+      </button>
     </div>
     <div class="flex-1 overflow-y-auto pb-40 md:pb-6">
       <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
@@ -148,6 +157,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getArtists, getNewestAlbums, getRandomAlbums, coverUrl } from '../api/subsonic'
 import AlbumRating from '../components/AlbumRating.vue'
+import { useUiStore } from '../stores/ui'
+import { Sun, Moon } from 'lucide-vue-next'
+
+const ui = useUiStore()
 
 const router = useRouter()
 

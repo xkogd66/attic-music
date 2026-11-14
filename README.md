@@ -70,16 +70,16 @@ src/
     MiniPlayer.vue   # mobile mini player
     FullPlayer.vue   # mobile full-screen player
     BottomNav.vue    # mobile bottom nav (6 tabs)
-    SideBar.vue      # desktop sidebar (nav + search + filters + last.fm scrobbles)
+    SideBar.vue      # desktop sidebar (search + nav + filters + last.fm scrobbles), collapsible
     LibraryFilters.vue # desktop genre/year filter dropdowns in the sidebar
     RecentPlays.vue  # last.fm recent scrobbles; album name opens the album
-    AskAiModal.vue   # desktop Ask AI overlay (opened from the sidebar ✨ button)
+    AskAiModal.vue   # desktop Ask AI overlay (opened by "✨ Ask" in the sidebar search field)
     FolderNode.vue   # expandable folder tree node
     TrackItem.vue    # track list item
     ArtistCard.vue   # artist grid card with circular avatar
   App.vue           # root layout + auth check
   main.js           # entry point
-  style.css         # Tailwind import + root styles
+  style.css         # Tailwind import + root styles + dark-mode palette
 ```
 
 ## Architecture Notes
@@ -201,6 +201,37 @@ src/
 - Mobile: full-width content + mini player + full-screen player modal + bottom nav (5 tabs)
 - Breakpoint is Tailwind's `md:` (768px)
 
+### Desktop Sidebar (SideBar.vue)
+- Top to bottom: title (server URL is its tooltip) + collapse button → search
+  field with **"✨ Ask"** inside it (opens `AskAiModal`) → Library nav →
+  `LibraryFilters` (Artists/Albums routes only) → Recent plays → footer
+  (Sign out · dark-mode toggle · rescan · mini player)
+- Layout rules: every section is `px-4` with `px-2` inside, so all text sits on
+  one 24px left edge; sections are separated by spacing, **no divider lines**;
+  every section heading uses the same `text-xs font-medium uppercase
+  tracking-widest text-stone-600`
+- **Collapsible**: `«` next to the title shrinks it to a `w-14` strip of nav
+  icons (labels as tooltips) with a `»` to expand. Not persisted — a reload
+  expands it. The collapsed strip has no footer actions
+- Rescan (`startScan`, polls `getScanStatus` every 30s) lives in the footer; the
+  icon spins while a scan runs
+
+### Dark Mode
+- Toggled by the moon/sun button (sidebar footer on desktop, Home top bar on
+  mobile) via `ui.toggleDark()`; sets the `dark` class on `<html>`
+- Choice saved in `localStorage.attic_ui_theme` (`dark` | `light`); until one is
+  picked, the app starts in the system's `prefers-color-scheme`
+- **It is a palette swap, not `dark:` classes**: `src/style.css` redefines the
+  Tailwind v4 colour variables under `.dark` — the stone scale is reversed,
+  `white` becomes the dark panel colour, amber tints go dark for backgrounds and
+  light for text. Existing light/dark pairs (e.g. `bg-stone-900 text-white`)
+  stay readable without touching components. Fix any spot that looks wrong
+  individually rather than adding `dark:` everywhere
+- Known/likely rough spots (unverified): `text-white` over `bg-black/…`
+  overlays turns dark; the 1px black `img` hairline is invisible on dark; a
+  light flash on load before the class is applied; the collapsed sidebar has
+  no toggle; on mobile the toggle is on Home only
+
 #### iOS rules — do not "simplify" these away
 - The app root in `App.vue` is `h-[100dvh]`, **not** `h-screen` / `100vh`. On iOS
   `100vh` is the viewport *without* the browser chrome, so the app lays out taller
@@ -317,7 +348,7 @@ src/
 - Song results in sidebar call `player.playTrack(song, [song], 0)` on click
 - Mobile has a dedicated `/search` route
 - **Ask AI is separate from search on desktop** — the sidebar box is plain
-  search only. The ✨ button next to it opens `AskAiModal.vue`. On mobile the
+  search only. The "✨ Ask" button inside it opens `AskAiModal.vue`. On mobile the
   two still share one view via the ✨ toggle in `Search.vue`. See
   [Chat Server](#chat-server) for the backend.
 
@@ -415,7 +446,7 @@ a picker back, configure several entries in `LLM_PROVIDERS` and render the
 
 Desktop and mobile split here deliberately:
 
-- **Desktop** — Ask AI is separate from search. The sidebar's ✨ button opens
+- **Desktop** — Ask AI is separate from search. The "✨ Ask" button inside the sidebar search field opens
   `AskAiModal.vue`, a centered overlay with its own input and full-width
   `TrackItem` rows. The sidebar search box is plain search only — no AI mode,
   no toggle. The 224px column was too narrow to show a reply and a track list
@@ -478,7 +509,7 @@ Manifests live in `k8s/`. The deployment runs in namespace `webapps` and pulls f
 
 - All components use `<script setup>` — no Options API
 - Composables and stores are imported directly; no global registration
-- Tailwind utility classes only — no custom CSS beyond root variables in `style.css`
+- Tailwind utility classes only — no custom CSS beyond root variables and the `.dark` palette in `style.css`
 - Keep API calls inside `src/api/`; views and components call store actions, not API methods directly
 - Vue reactivity: never use `Set` or `Map` inside plain objects assigned to `ref` — use plain arrays with `.includes()` deduplication
 - Carousel cards: always use `w-full` on the flex scroll container and `width: calc(100% / 3 - 8px)` on each card for exact 3-visible-card rows

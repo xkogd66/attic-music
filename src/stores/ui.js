@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 // Desktop UI prefs that aren't about playback or server config.
 export const useUiStore = defineStore('ui', () => {
@@ -25,5 +25,21 @@ export const useUiStore = defineStore('ui', () => {
     setMinimal(!minimal.value)
   }
 
-  return { minimal, setMinimal, toggleMinimal }
+  // Dark mode: toggles the `.dark` class on <html> (palette in style.css).
+  // The choice is saved once made; until then it follows the system setting
+  // at startup.
+  const THEME_KEY = 'attic_ui_theme'
+  let savedTheme = null
+  try { savedTheme = localStorage.getItem(THEME_KEY) } catch (_) {}
+  const dark = ref(savedTheme
+    ? savedTheme === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches)
+  watch(dark, v => document.documentElement.classList.toggle('dark', v), { immediate: true })
+
+  function toggleDark() {
+    dark.value = !dark.value
+    try { localStorage.setItem(THEME_KEY, dark.value ? 'dark' : 'light') } catch (_) {}
+  }
+
+  return { minimal, setMinimal, toggleMinimal, dark, toggleDark }
 })

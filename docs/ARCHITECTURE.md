@@ -151,7 +151,11 @@ Auth-guarded SPA routes:
     `jumpToQueue`, `seek`, `setVolume`, `toggleMute`, `fmt`.
 - **`playlist`** — caches the playlist list (`load()` once on first use) and
   `addTrack(playlistId, trackId)`.
-- **`ui`** (`src/stores/ui.js`) — desktop presentation prefs, currently just
+- **`ui`** (`src/stores/ui.js`) — presentation prefs:
+  `dark` (**dark mode**, `toggleDark()`; toggles the `dark` class on `<html>`,
+  saved to `localStorage.attic_ui_theme`, defaults to the system
+  `prefers-color-scheme` until picked — palette in `style.css`, see README
+  "Dark Mode"), and
   `minimal` (**mini-player mode**) persisted to `localStorage.attic_ui_minimal`
   via `setMinimal()`/`toggleMinimal()`. Read by `App.vue` (unmounts the sidebar
   and views) and `Player.vue` (renders `MiniWindow`, skips the mobile
@@ -270,13 +274,17 @@ Auth-guarded SPA routes:
   paste-and-save, controls + seek + volume.
 - **`BottomNav.vue`** (mobile) — 5 tabs: Home / Artists / Albums / Playlists /
   Search.
-- **`SideBar.vue`** (desktop) — header w/ server name, nav (with a **library
-  rescan** button that calls `startScan` and polls `getScanStatus` every 30s),
-  debounced search dropdown, "✨ Ask AI" button opening `AskAiModal`,
-  `LibraryFilters` (only on the Artists/Albums routes), "Recent
-  plays" (Last.fm scrobbles polled every 30s), sign-out, and the **mini-player
-  toggle** (`PanelLeftClose`) that sets `ui.minimal`, replacing the whole app
-  with `MiniWindow`.
+- **`SideBar.vue`** (desktop) — top to bottom: title (server URL as its
+  tooltip) + `«` collapse button, debounced search field with a **"✨ Ask"**
+  button inside it opening `AskAiModal`, Library nav, `LibraryFilters` (only on
+  the Artists/Albums routes), "Recent plays" (Last.fm scrobbles polled every
+  30s), and a footer: sign-out, **dark-mode toggle** (`ui.toggleDark()`),
+  **library rescan** (`startScan`, polls `getScanStatus` every 30s, icon spins
+  meanwhile) and the **mini-player toggle** (`PanelLeftClose`) that sets
+  `ui.minimal`, replacing the whole app with `MiniWindow`. One 24px left edge,
+  one heading style, no divider lines. **Collapsible** to a `w-14` strip of nav
+  icons (local `collapsed` ref, not persisted; no footer actions while
+  collapsed).
 - **`AskAiModal.vue`** (desktop) — centered overlay; on submit calls `askAI`,
   renders the reply (splitting `**bold**` text into segments rather than
   `v-html` — model output is never treated as HTML) plus `TrackItem` rows.
@@ -569,6 +577,10 @@ level.
 - All components use `<script setup>`; no global registration; Tailwind
   utilities only (the accent color is actually unused amber/stone in the code,
   with `--accent: #B85C38` defined in `style.css`).
+- **Dark mode is a palette swap**: `style.css` redefines Tailwind v4's colour
+  variables (`--color-white`, `--color-stone-*`, some `--color-amber-*`) under
+  `.dark`, reversing the stone scale. Components carry no `dark:` classes; fix
+  individual spots that look wrong rather than adding them wholesale.
 - Vue-reactivity rule (documented in README): **no `Set`/`Map` inside objects
   assigned to `ref`** — plain arrays with `.includes()` dedup (e.g.
   `getArtistGenreMap`).

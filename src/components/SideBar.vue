@@ -152,6 +152,16 @@
       <div class="flex items-center gap-3">
         <button
           type="button"
+          class="text-stone-600 hover:text-amber-700 transition-colors"
+          :title="ui.dark ? 'Light mode' : 'Dark mode'"
+          @click="ui.toggleDark()"
+        >
+          <Sun v-if="ui.dark" :size="15" />
+          <Moon v-else :size="15" />
+        </button>
+
+        <button
+          type="button"
           class="text-stone-600 hover:text-amber-700 transition-colors disabled:opacity-40"
           :title="scanning ? 'Scanning…' : 'Rescan library'"
           :disabled="scanning"
@@ -189,7 +199,7 @@ import RecentPlays from './RecentPlays.vue'
 import LibraryFilters from './LibraryFilters.vue'
 import AskAiModal from './AskAiModal.vue'
 import AlbumRating from './AlbumRating.vue'
-import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose, ChevronsLeft, ChevronsRight } from 'lucide-vue-next'
+import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose, ChevronsLeft, ChevronsRight, Sun, Moon } from 'lucide-vue-next'
 
 const config = useConfigStore()
 const player = usePlayerStore()

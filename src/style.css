@@ -23,3 +23,31 @@ img {
   border: 1px solid #000;
   border-radius: inherit;
 }
+
+/* Dark mode is a palette swap, not per-component dark: classes. Tailwind v4
+   utilities read their colours from these variables, so redefining them under
+   .dark (set on <html> by the ui store) flips the whole app. The stone scale is
+   reversed and white becomes the panel surface, which keeps the existing
+   light/dark pairings readable (e.g. bg-stone-900 text-white on the Play
+   button). Amber tints go dark for backgrounds and light for text. */
+.dark {
+  color-scheme: dark;
+  --color-white:     oklch(22% 0.006 56);
+  --color-stone-50:  oklch(18% 0.005 56);
+  --color-stone-100: oklch(27% 0.007 50);
+  --color-stone-200: oklch(32% 0.008 50);
+  --color-stone-300: oklch(40% 0.010 56);
+  --color-stone-400: oklch(55% 0.013 58);
+  --color-stone-500: oklch(65% 0.012 58);
+  --color-stone-600: oklch(72% 0.010 60);
+  --color-stone-700: oklch(82% 0.006 60);
+  --color-stone-800: oklch(90% 0.004 60);
+  --color-stone-900: oklch(95% 0.002 90);
+  --color-stone-950: oklch(98% 0.001 106);
+  --color-amber-50:  oklch(28% 0.040 60);
+  --color-amber-100: oklch(33% 0.060 60);
+  --color-amber-200: oklch(40% 0.080 60);
+  --color-amber-600: oklch(78% 0.150 70);
+  --color-amber-700: oklch(80% 0.140 70);
+  --color-amber-800: oklch(86% 0.110 80);
+}
