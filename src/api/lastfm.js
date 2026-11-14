@@ -44,25 +44,25 @@ export async function getRecentTracks(limit = 5) {
 }
 
 // ── LIBRARY MATCHING ──────────────────────────────────
-// A scrobble is just text (artist/track/album) — it carries no Subsonic id, so
-// it can't be streamed directly. search3 matches loosely, so prefer an exact
-// artist+title hit over its first result (which may be a different take of the
-// same song), and accept the first result only when nothing matches exactly.
+// A scrobble is just text (artist/track/album) — it carries no Subsonic id.
+// search3 matches loosely, so prefer an album whose name AND artist match;
+// fall back to a name-only match (a compilation's album artist differs from
+// the scrobbled track artist). Never a merely loose first hit.
 
 const norm = s => (s || '').trim().toLowerCase()
 
-// `${artist}\n${track}` -> Promise<song | null>. Kept for the session so a
-// re-poll of the same scrobbles (every 30s) doesn't re-search them.
+// `${artist}\n${album}` -> Promise<album | null>. Kept for the session so
+// repeat clicks don't re-search.
 const resolved = new Map()
 
-export function findLibrarySong({ artist, track }) {
-  const key = `${norm(artist)}\n${norm(track)}`
+export function findLibraryAlbum({ artist, album }) {
+  const key = `${norm(artist)}\n${norm(album)}`
   if (!resolved.has(key)) {
     resolved.set(key, (async () => {
       try {
-        const { songs } = await search([artist, track].filter(Boolean).join(' '))
-        const exact = songs.find(s => norm(s.title) === norm(track) && norm(s.artist) === norm(artist))
-        return exact || songs[0] || null
+        const { albums } = await search(album)
+        const named = albums.filter(a => norm(a.name) === norm(album))
+        return named.find(a => norm(a.artist) === norm(artist)) || named[0] || null
       } catch (e) {
         // Don't cache failures — the next click (or poll) should retry.
         resolved.delete(key)

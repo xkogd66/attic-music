@@ -15,40 +15,40 @@
     </div>
     <div v-if="open" class="overflow-y-auto flex-1 space-y-1 px-2 pb-4">
       <div v-if="!scrobbles.length" class="text-xs text-stone-600 px-2">Nothing yet…</div>
-      <!-- Rows are buttons: a scrobble is text only, so a click looks the song
-           up in the library first (findLibrarySong) and then plays it. -->
-      <button
+      <!-- Only the album is clickable: a scrobble is text only, so a click looks
+           the album up in the library first (findLibraryAlbum), then opens it. -->
+      <div
         v-for="(s, i) in scrobbles"
         :key="i"
-        type="button"
-        class="w-full text-left px-2 py-1.5 rounded border-b border-stone-100 last:border-0 transition-colors disabled:cursor-default"
-        :class="[
-          s.id === player.currentTrack?.id ? 'bg-amber-50' : 'hover:bg-stone-50',
-          busyIndex === i ? 'opacity-60' : '',
-        ]"
-        :disabled="busyIndex !== null"
-        :title="s.missing ? 'Not in your library' : `Play ${s.track}`"
-        @click="resume(i, s)"
+        class="px-2 py-1.5 border-b border-stone-100 last:border-0"
       >
-        <div class="text-xs font-medium truncate" :class="s.nowplaying || s.id === player.currentTrack?.id ? 'text-amber-700' : 'text-stone-800'">
+        <div class="text-xs font-medium truncate" :class="s.nowplaying ? 'text-amber-700' : 'text-stone-800'">
           <span v-if="s.nowplaying" class="inline-block w-1.5 h-1.5 rounded-full bg-amber-700 mr-1 mb-0.5 animate-pulse"></span>
-          <span v-else-if="s.id === player.currentTrack?.id" class="mr-1">♪</span>
           {{ s.track }}
         </div>
         <div class="text-xs text-stone-600 truncate">{{ s.artist }}</div>
+        <button
+          v-if="s.album"
+          type="button"
+          class="block max-w-full text-left text-xs text-stone-600 hover:text-amber-700 truncate transition-colors disabled:cursor-default"
+          :class="busyIndex === i ? 'opacity-60' : ''"
+          :disabled="busyIndex !== null"
+          :title="s.missing ? 'Not in your library' : `Open ${s.album}`"
+          @click="openAlbum(i, s)"
+        >{{ s.album }}</button>
         <div v-if="s.missing" class="text-xs text-stone-400 mt-0.5 italic">not in library</div>
         <div v-else-if="!s.nowplaying" class="text-xs text-stone-500 mt-0.5">{{ s.when }}</div>
-      </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { getRecentTracks, findLibrarySong } from '../api/lastfm'
-import { usePlayerStore } from '../stores/player'
+import { useRouter } from 'vue-router'
+import { getRecentTracks, findLibraryAlbum } from '../api/lastfm'
 
-const player = usePlayerStore()
+const router = useRouter()
 
 const open = ref(true)
 const scrobbles = ref([])
@@ -58,12 +58,12 @@ let timer = null
 async function fetchScrobbles() {
   try {
     const fresh = await getRecentTracks(5)
-    // Carry over ids/misses already resolved so the highlight doesn't flicker
-    // and answered lookups aren't dropped on every poll.
+    // Carry over misses already resolved so answered lookups aren't dropped
+    // on every poll.
     const prev = new Map(scrobbles.value.map(s => [`${s.artist}\n${s.track}`, s]))
     scrobbles.value = fresh.map(s => {
       const old = prev.get(`${s.artist}\n${s.track}`)
-      return old ? { ...s, id: old.id, missing: old.missing } : s
+      return old ? { ...s, missing: old.missing } : s
     })
   } catch (e) {
     if (e.permanent) {
@@ -74,17 +74,15 @@ async function fetchScrobbles() {
   }
 }
 
-// Resume a play: resolve the scrobble to a library song, then play it.
-// Single-track queue, same as a sidebar search result.
-async function resume(index, s) {
+// Resolve the scrobble's album to a library album, then open its page.
+async function openAlbum(index, s) {
   if (busyIndex.value !== null) return
   busyIndex.value = index
   try {
-    const song = s.id ? { id: s.id, title: s.track, artist: s.artist } : await findLibrarySong(s)
-    if (!song) { s.missing = true; return }
+    const album = await findLibraryAlbum(s)
+    if (!album) { s.missing = true; return }
     s.missing = false
-    s.id = song.id
-    player.playTrack(song, [song], 0)
+    router.push({ name: 'album-detail', params: { id: album.id } })
   } catch (_) {
     // library unreachable — leave the row as it was, a later click retries
   } finally {
