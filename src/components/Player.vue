@@ -65,7 +65,7 @@
 
     <!-- RIGHT -->
     <div class="flex items-center justify-end gap-2 flex-shrink-0">
-      <button v-if="player.currentTrack" class="ctrl" title="Download track" @click="download(player.currentTrack.id)">
+      <button v-if="player.currentTrack" class="ctrl" title="Download track" @click="downloadTrack(player.currentTrack)">
         <Download :size="16" />
       </button>
       <!-- Volume -->
@@ -202,7 +202,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { Shuffle, Repeat, Play, Pause, SkipBack, SkipForward, Volume1, Volume2, VolumeX, ChevronsDown, Download } from 'lucide-vue-next'
 import { usePlayerStore } from '../stores/player'
 import { useUiStore } from '../stores/ui'
-import { coverUrl, createPlaylist, download } from '../api/subsonic'
+import { coverUrl, createPlaylist, downloadTrack } from '../api/subsonic'
 import { fetchLyrics, saveManualLyrics } from '../api/lyrics'
 import CompactPlayer from './CompactPlayer.vue'
 import MiniWindow from './MiniWindow.vue'

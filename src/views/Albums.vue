@@ -238,7 +238,7 @@
               <div class="flex gap-2">
                 <button class="bg-stone-900 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
-                <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download album" @click="downloadAlbumOrSelected">{{ selectedIds.length ? `⬇ Download (${selectedIds.length})` : '⬇ Download' }}</button>
+                <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download selected tracks, or the whole album, as a zip" @click="downloadAlbumOrSelected"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" /></svg>{{ selectedIds.length ? `Download (${selectedIds.length})` : 'Download' }}</button>
               </div>
             </div>
           </div>
@@ -393,7 +393,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
-import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, getArtists, download, downloadMany } from '../api/subsonic'
+import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, getArtists, downloadZip } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
 import { GENRES } from '../api/genres'
@@ -429,8 +429,10 @@ function toggleSelected(id) {
   else selectedIds.value.splice(i, 1)
 }
 function downloadAlbumOrSelected() {
-  if (!selectedIds.value.length) return download(currentAlbum.value.id)
-  selectedIds.value.length === 1 ? download(selectedIds.value[0]) : downloadMany(selectedIds.value)
+  const tracks = selectedIds.value.length
+    ? albumTracks.value.filter(t => selectedIds.value.includes(t.id))
+    : albumTracks.value
+  downloadZip(tracks, displayTitle.value)
 }
 const showLocation = ref(false)
 const albumDetailCoverSrc   = ref(null)

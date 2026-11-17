@@ -176,10 +176,10 @@ src/
 - Queue, shuffle, repeat, seek, and progress are all store-managed
 
 ### Downloads
-- `download(id)` in `src/api/subsonic.js` hits Subsonic `download` (original file, not `stream`) via a throwaway `<a download>` so the browser saves straight to disk
+- `downloadTrack(track)` fetches the song as a blob and saves it as `Artist - Title.ext` (a bare `<a download>` just made the browser play the file). `download(id)` (now unused; albums are zipped client-side) in `src/api/subsonic.js` hits Subsonic `download` (original file, not `stream`) via a throwaway `<a download>` so the browser saves straight to disk
 - Song: `TrackItem` `+` menu → "Download", and a download icon in the desktop `Player.vue` for the current track
-- Multi-select: `TrackItem` has a `selectable` checkbox (shown on hover, in the # column). In album detail (`Artists.vue`, `Albums.vue`) and `Playlists.vue`, the Download button downloads the checked tracks (`downloadMany`, staggered one file per track) and shows the count; with nothing checked it downloads the whole album (or, for playlists, every track)
-- Album: "⬇ Download" button next to Play/Queue in the album detail of `Artists.vue` and `Albums.vue`, passing the album id (expects gonic to return a zip — **unverified**; if gonic only serves songs, add a zip endpoint to the artist-images sidecar using the `dir` param)
+- Multi-select: `TrackItem` has a `selectable` checkbox (shown on hover, in the # column). In album detail (`Artists.vue`, `Albums.vue`) and `Playlists.vue`, the Download button downloads the checked tracks (`downloadZip` in `subsonic.js`: fetches each track, builds a store-only zip in the browser with a small built-in writer, saves `<album>.zip`; one track = plain file) and shows the count; with nothing checked it zips the whole album/playlist
+- Album/playlist: "Download" button (line-style SVG icon, matching the other icons) next to Play/Queue in the album detail of `Artists.vue` and `Albums.vue` and in `Playlists.vue`; zips client-side as described above
 
 ### Playlists
 - Playlists are fully server-side (Gonic); `getPlaylists`, `getPlaylist`, `updatePlaylist`, `deletePlaylist` are all in `subsonic.js`

@@ -76,7 +76,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player'
 import { usePlaylistStore } from '../stores/playlist'
-import { download } from '../api/subsonic'
+import { downloadTrack as saveTrack } from '../api/subsonic'
 
 const props = defineProps({
   track:    { type: Object,  required: true },
@@ -121,7 +121,7 @@ function addToQueue() {
 }
 
 function downloadTrack() {
-  download(props.track.id)
+  saveTrack(props.track)
   closeMenu()
 }
 
