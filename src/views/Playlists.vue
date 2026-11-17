@@ -79,6 +79,7 @@
               <div class="flex gap-2 flex-wrap">
                 <button class="bg-stone-900 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-700 transition-colors" @click="playTracks">▶ Play</button>
                 <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueTracks">+ Queue</button>
+                <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download selected tracks, or all if none selected" @click="downloadSelectedOrAll">{{ selectedIds.length ? `⬇ Download (${selectedIds.length})` : '⬇ Download' }}</button>
                 <button class="border border-red-200 text-xs px-4 py-2 rounded-full text-red-400 hover:border-red-400 hover:text-red-600 transition-colors" @click="confirmDelete">Delete</button>
               </div>
             </div>
@@ -97,6 +98,9 @@
               @play="player.playTrack(track, playlistTracks, i)"
               @queue="player.addToQueue(track)"
               @remove="removeTrack"
+              selectable
+              :selected="selectedIds.includes(track.id)"
+              @select="toggleSelected(track.id)"
             />
           </template>
         </div>
@@ -111,7 +115,7 @@ import { ref, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { usePlaylistStore } from '../stores/playlist'
-import { getPlaylists, getPlaylist, createPlaylist, deletePlaylist, updatePlaylist, coverUrl } from '../api/subsonic'
+import { getPlaylists, getPlaylist, createPlaylist, deletePlaylist, updatePlaylist, coverUrl, downloadMany } from '../api/subsonic'
 import TrackItem from '../components/TrackItem.vue'
 
 const route          = useRoute()
@@ -123,6 +127,16 @@ const loading         = ref(false)
 const playlists       = ref([])
 const currentPlaylist = ref(null)
 const playlistTracks  = ref([])
+const selectedIds     = ref([])
+watch(playlistTracks, () => { selectedIds.value = [] })
+function toggleSelected(id) {
+  const i = selectedIds.value.indexOf(id)
+  if (i === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(i, 1)
+}
+function downloadSelectedOrAll() {
+  downloadMany(selectedIds.value.length ? selectedIds.value : playlistTracks.value.map(t => t.id))
+}
 
 const creating    = ref(false)
 const newName     = ref('')

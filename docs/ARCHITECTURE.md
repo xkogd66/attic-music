@@ -290,7 +290,7 @@ Auth-guarded SPA routes:
   `v-html` — model output is never treated as HTML) plus `TrackItem` rows.
 - **`TrackItem.vue`** — the reusable track row; number/♪ indicator,
   title/artist, duration, edit-tags button, and a `+` dropdown (playlist list +
-  "Add to queue" + "Remove from playlist" when `removable`).
+  "Add to queue" + "Remove from playlist" when `removable`). Optional `selectable`/`selected` props render a checkbox in the # column and emit `select` (used for multi-track download).
 - **`ArtistCard.vue`** — circular avatar (sidecar URL first, letter placeholder
   on error) + name + album count.
 - **`FolderNode.vue`** — recursive expandable folder tree using Vue

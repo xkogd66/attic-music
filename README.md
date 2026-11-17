@@ -178,6 +178,7 @@ src/
 ### Downloads
 - `download(id)` in `src/api/subsonic.js` hits Subsonic `download` (original file, not `stream`) via a throwaway `<a download>` so the browser saves straight to disk
 - Song: `TrackItem` `+` menu → "Download", and a download icon in the desktop `Player.vue` for the current track
+- Multi-select: `TrackItem` has a `selectable` checkbox (shown on hover, in the # column). In album detail (`Artists.vue`, `Albums.vue`) and `Playlists.vue`, the Download button downloads the checked tracks (`downloadMany`, staggered one file per track) and shows the count; with nothing checked it downloads the whole album (or, for playlists, every track)
 - Album: "⬇ Download" button next to Play/Queue in the album detail of `Artists.vue` and `Albums.vue`, passing the album id (expects gonic to return a zip — **unverified**; if gonic only serves songs, add a zip endpoint to the artist-images sidecar using the `dir` param)
 
 ### Playlists

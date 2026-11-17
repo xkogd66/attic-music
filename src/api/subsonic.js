@@ -43,6 +43,11 @@ export function download(id) {
   a.remove()
 }
 
+// Several songs: one download per id, staggered so browsers don't drop them.
+export function downloadMany(ids) {
+  ids.forEach((id, i) => setTimeout(() => download(id), i * 400))
+}
+
 function ensureArray(val) {
   if (!val) return []
   return Array.isArray(val) ? val : [val]

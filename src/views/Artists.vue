@@ -319,7 +319,7 @@
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
-                <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download album" @click="download(currentAlbum.id)">⬇ Download</button>
+                <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download album" @click="downloadAlbumOrSelected">{{ selectedIds.length ? `⬇ Download (${selectedIds.length})` : '⬇ Download' }}</button>
               </div>
             </div>
           </div>
@@ -343,6 +343,9 @@
             @play="player.playTrack(track, albumTracks, i)"
             @queue="player.addToQueue(track)"
             @edit="openTrackEditor"
+            selectable
+            :selected="selectedIds.includes(track.id)"
+            @select="toggleSelected(track.id)"
           />
         </div>
       </div>
@@ -473,7 +476,7 @@ import { ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } from
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
-import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap, download } from '../api/subsonic'
+import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap, download, downloadMany } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, searchArtistImages, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
 import { GENRES } from '../api/genres'
@@ -651,6 +654,18 @@ const filteredArtistIndex = computed(() => {
 
 const currentAlbum  = ref(null)
 const albumTracks   = ref([])
+
+const selectedIds = ref([])
+watch(albumTracks, () => { selectedIds.value = [] })
+function toggleSelected(id) {
+  const i = selectedIds.value.indexOf(id)
+  if (i === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(i, 1)
+}
+function downloadAlbumOrSelected() {
+  if (!selectedIds.value.length) return download(currentAlbum.value.id)
+  selectedIds.value.length === 1 ? download(selectedIds.value[0]) : downloadMany(selectedIds.value)
+}
 const showLocation  = ref(false)
 const albumDetailCoverSrc   = ref(null)
 const albumDetailCoverState = ref('loading') // 'loading' | 'sidecar' | 'failed'

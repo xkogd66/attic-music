@@ -5,7 +5,17 @@
     @click="emit('play')"
   >
     <div class="text-xs text-stone-600 text-center">
-      <span v-if="isPlaying">♪</span>
+      <input
+        v-if="selectable"
+        type="checkbox"
+        class="accent-amber-700 cursor-pointer"
+        :class="selected ? '' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'"
+        :checked="selected"
+        title="Select for download"
+        @click.stop
+        @change="emit('select', track)"
+      />
+      <span v-else-if="isPlaying">♪</span>
       <span v-else>{{ removable ? index + 1 : (track.track || index + 1) }}</span>
     </div>
     <div class="min-w-0">
@@ -73,9 +83,11 @@ const props = defineProps({
   index:    { type: Number,  required: true },
   removable: { type: Boolean, default: false },
   editable:  { type: Boolean, default: false },
+  selectable: { type: Boolean, default: false },
+  selected:   { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['play', 'queue', 'remove', 'edit'])
+const emit = defineEmits(['play', 'queue', 'remove', 'edit', 'select'])
 
 const player  = usePlayerStore()
 const plStore = usePlaylistStore()
