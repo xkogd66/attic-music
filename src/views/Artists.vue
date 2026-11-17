@@ -319,6 +319,7 @@
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
                 <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
+                <button class="border border-stone-200 text-sm px-4 py-2 hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download album" @click="download(currentAlbum.id)">⬇ Download</button>
               </div>
             </div>
           </div>
@@ -472,7 +473,7 @@ import { ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } from
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
-import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap } from '../api/subsonic'
+import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap, download } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
 import { searchAlbumCovers, searchArtistImages, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
 import { GENRES } from '../api/genres'

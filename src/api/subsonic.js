@@ -27,6 +27,22 @@ export function streamUrl(id) {
   return buildUrl('stream', { id, format: 'raw' })
 }
 
+// Subsonic `download` serves the original file (a song id) or, for an album id,
+// whatever gonic returns for it (expected: a zip). Triggered via a throwaway
+// anchor so the browser streams it straight to disk instead of buffering in JS.
+export function downloadUrl(id) {
+  return buildUrl('download', { id })
+}
+
+export function download(id) {
+  const a = document.createElement('a')
+  a.href = downloadUrl(id)
+  a.download = ''
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
 function ensureArray(val) {
   if (!val) return []
   return Array.isArray(val) ? val : [val]

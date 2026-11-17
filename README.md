@@ -175,6 +175,11 @@ src/
 - Stream URLs are authenticated Subsonic `/stream` endpoints
 - Queue, shuffle, repeat, seek, and progress are all store-managed
 
+### Downloads
+- `download(id)` in `src/api/subsonic.js` hits Subsonic `download` (original file, not `stream`) via a throwaway `<a download>` so the browser saves straight to disk
+- Song: `TrackItem` `+` menu → "Download", and a download icon in the desktop `Player.vue` for the current track
+- Album: "⬇ Download" button next to Play/Queue in the album detail of `Artists.vue` and `Albums.vue`, passing the album id (expects gonic to return a zip — **unverified**; if gonic only serves songs, add a zip endpoint to the artist-images sidecar using the `dir` param)
+
 ### Playlists
 - Playlists are fully server-side (Gonic); `getPlaylists`, `getPlaylist`, `updatePlaylist`, `deletePlaylist` are all in `subsonic.js`
 - `playlist.js` store caches the playlist list (fetched once on first use); `addTrack(playlistId, trackId)` calls `updatePlaylist` to append a song

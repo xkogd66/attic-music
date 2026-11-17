@@ -48,6 +48,10 @@
             @click.stop="addToQueue"
           >Add to queue</button>
           <button
+            class="w-full text-left px-3 py-2 text-sm text-stone-500 hover:bg-stone-50 transition-colors"
+            @click.stop="downloadTrack"
+          >Download</button>
+          <button
             v-if="removable"
             class="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
             @click.stop="removeFromPlaylist"
@@ -62,6 +66,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player'
 import { usePlaylistStore } from '../stores/playlist'
+import { download } from '../api/subsonic'
 
 const props = defineProps({
   track:    { type: Object,  required: true },
@@ -100,6 +105,11 @@ async function addTo(pl) {
 
 function addToQueue() {
   player.addToQueue(props.track)
+  closeMenu()
+}
+
+function downloadTrack() {
+  download(props.track.id)
   closeMenu()
 }
 
