@@ -203,7 +203,7 @@ import RecentPlays from './RecentPlays.vue'
 import LibraryFilters from './LibraryFilters.vue'
 import AskAiModal from './AskAiModal.vue'
 import AlbumRating from './AlbumRating.vue'
-import { House, Mic2, Disc3, ListMusic, Wrench, RefreshCw, PanelLeftClose, ChevronsLeft, ChevronsRight, Sun, Moon, LogOut } from 'lucide-vue-next'
+import { House, Mic2, Disc3, ListMusic, BarChart3, Wrench, RefreshCw, PanelLeftClose, ChevronsLeft, ChevronsRight, Sun, Moon, LogOut } from 'lucide-vue-next'
 
 const config = useConfigStore()
 const player = usePlayerStore()
@@ -222,6 +222,7 @@ const navItems = [
   { to: '/artists',   icon: Mic2,      label: 'Artists'   },
   { to: '/albums',    icon: Disc3,     label: 'Albums'    },
   { to: '/playlists', icon: ListMusic, label: 'Playlists' },
+  { to: '/stats',     icon: BarChart3, label: 'Stats'     },
   { to: '/tools',     icon: Wrench,    label: 'Tools'     },
 ]
 

@@ -173,14 +173,45 @@ const CLICKHOUSE_URL = process.env.CLICKHOUSE_URL;
 const CLICKHOUSE_AUTH =
   "Basic " + Buffer.from(`${process.env.CLICKHOUSE_USER || "default"}:${process.env.CLICKHOUSE_PASSWORD || ""}`).toString("base64");
 
-async function clickhouse(sql, body) {
-  const res = await fetch(`${CLICKHOUSE_URL}/?query=${encodeURIComponent(sql)}`, {
+// params are bound server-side as ClickHouse query parameters ({name:Type} in
+// the SQL), so user/LLM input never gets spliced into the query text.
+async function clickhouse(sql, body, params = {}) {
+  const qs = new URLSearchParams({ query: sql });
+  for (const [k, v] of Object.entries(params)) qs.set(`param_${k}`, String(v));
+  const res = await fetch(`${CLICKHOUSE_URL}/?${qs}`, {
     method: "POST",
     headers: { Authorization: CLICKHOUSE_AUTH },
     body,
   });
   if (!res.ok) throw new Error(`ClickHouse ${res.status}: ${await res.text()}`);
   return res.text();
+}
+
+// Play counts grouped by artist / album / track / year, optionally narrowed to
+// one year and/or one artist. Shared by GET /scrobbles/stats (Stats page) and
+// the scrobble_stats LLM tool — fixed SQL shapes, never model-written SQL.
+const STATS_GROUPS = { artist: "artist", album: "artist, album", track: "artist, track", year: "toYear(ts) AS year" };
+
+async function scrobbleStats({ by = "artist", year, artist, limit = 20 } = {}) {
+  const group = STATS_GROUPS[by];
+  if (!group) throw Object.assign(new Error(`by must be one of: ${Object.keys(STATS_GROUPS).join(", ")}`), { status: 400 });
+  const where = [];
+  const params = {};
+  if (year) {
+    where.push("toYear(ts) = {year:UInt16}");
+    params.year = parseInt(year, 10);
+  }
+  if (artist) {
+    where.push("artist = {artist:String}");
+    params.artist = String(artist).toLowerCase();
+  }
+  const n = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 200);
+  const sql =
+    `SELECT ${group}, toUInt32(count()) AS plays FROM music.scrobbles` +
+    (where.length ? ` WHERE ${where.join(" AND ")}` : "") +
+    ` GROUP BY ${by === "year" ? "year" : group}` +
+    ` ORDER BY ${by === "year" ? "year" : "plays DESC"} LIMIT ${n} FORMAT JSON`;
+  return JSON.parse(await clickhouse(sql, undefined, params)).data;
 }
 
 const TOOLS = [
@@ -211,6 +242,24 @@ const TOOLS = [
       required: ["ids"],
     },
   },
+  {
+    name: "scrobble_stats",
+    description:
+      "Query the user's own listening history (every track they have played, with a timestamp). Returns play " +
+      "counts grouped by artist, album, track or year, most-played first (by year: chronological). Optionally " +
+      "narrow to one calendar year and/or one artist. Names are stored lowercase. Use this for any question about " +
+      "what the user has listened to, how often, or when.",
+    input_schema: {
+      type: "object",
+      properties: {
+        by: { type: "string", enum: ["artist", "album", "track", "year"], description: "What to group plays by" },
+        year: { type: "integer", description: "Only count plays from this calendar year" },
+        artist: { type: "string", description: "Only count plays of this artist (exact name)" },
+        limit: { type: "integer", description: "Max rows to return (default 20, max 200)" },
+      },
+      required: ["by"],
+    },
+  },
   ...(DISCOGS_TOKEN
     ? [
         {
@@ -238,6 +287,8 @@ const SYSTEM_PROMPT =
   "have searched enough, call show_songs with the ids of only the songs that genuinely answer it; the app " +
   "displays exactly that list. Then reply with a brief, one or two sentence summary. Do not list every " +
   "track in your reply, and make sure any count you state matches the number of ids you passed to show_songs. " +
+  "For questions about the user's listening history (most played, when, how often), use scrobble_stats and answer " +
+  "from its results; there you may name the top entries and their play counts in your reply. " +
   "Write plain prose — no markdown, no bold, no bullet points.";
 
 // One extra turn over the old 4: searching, then show_songs, then the summary.
@@ -343,6 +394,15 @@ async function runChat(message, provider) {
         });
         continue;
       }
+      if (use.name === "scrobble_stats") {
+        try {
+          const rows = await scrobbleStats(use.input ?? {});
+          toolResults.push({ type: "tool_result", tool_use_id: use.id, content: JSON.stringify(rows) });
+        } catch (err) {
+          toolResults.push({ type: "tool_result", tool_use_id: use.id, content: err.message, is_error: true });
+        }
+        continue;
+      }
       if (use.name === "discogs_rating") {
         try {
           const r = await getRating(use.input.artist, use.input.album);
@@ -383,6 +443,15 @@ const server = createServer((req, res) => {
     console.error(err);
     json(424, { error: err.message });
   };
+
+  if (url.pathname === "/scrobbles/stats" && req.method === "GET") {
+    const q = Object.fromEntries(url.searchParams);
+    scrobbleStats(q).then(
+      (rows) => json(200, rows),
+      (err) => (err.status === 400 ? json(400, { error: err.message }) : upstreamError(err)),
+    );
+    return;
+  }
 
   if (url.pathname === "/scrobbles") {
     if (req.method === "GET") {

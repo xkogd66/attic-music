@@ -32,6 +32,18 @@ export async function getRecentScrobbles(limit = 5) {
   }))
 }
 
+// Play counts: by = 'artist' | 'album' | 'track' | 'year'; optional year, artist, limit.
+// Rows: { artist, album?, track?, year?, plays }.
+export async function getScrobbleStats({ by = 'artist', year, artist, limit } = {}) {
+  const qs = new URLSearchParams({ by })
+  if (year)   qs.set('year', year)
+  if (artist) qs.set('artist', artist)
+  if (limit)  qs.set('limit', limit)
+  const res = await fetch(`/chat-api/scrobbles/stats?${qs}`, { cache: 'no-store' })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `stats failed (${res.status})`)
+  return res.json()
+}
+
 // ── LIBRARY MATCHING ──────────────────────────────────
 // A scrobble is just text (artist/track/album) — it carries no Subsonic id.
 // search3 matches loosely, so prefer an album whose name AND artist match;
