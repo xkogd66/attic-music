@@ -21,15 +21,12 @@ jobs:
 
       - name: Generate config
         env:
-          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
           cat > public/config.json <<EOF
           {
             "server": "https://gonic.ekskog.net",
             "username": "lucarv",
-            "lastfmUser": "katstoopid",
-            "lastfmKey": "$LASTFM_API_KEY",
             "turnstileSiteKey": "$TURNSTILE_SITE_KEY"
           }
           EOF

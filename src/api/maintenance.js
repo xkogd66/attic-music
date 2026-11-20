@@ -73,12 +73,11 @@ export function startConvert(artist, album, { to = 'mp3', bitrate = '320k', dele
 }
 
 // ── Enrich ──────────────────────────────────────────────────────
-// fields: comma list, e.g. 'genre,year'. lastfmKey is passed through so the
-// sidecar can use Last.fm as a genre fallback without storing the key itself.
+// fields: comma list, e.g. 'genre,year'.
 // overwriteYear=true re-fetches the oldest MusicBrainz release year and
 // replaces TDRC even when the album already has one (default: fill blanks only).
-export function startEnrich(artist, album, { fields = 'genre,year', lastfmKey = '', overwriteYear = false, apply = false } = {}) {
-  return start('/enrich', { artist, album, fields, lastfmKey, overwriteYear: overwriteYear ? '1' : '', apply: apply ? '1' : '' })
+export function startEnrich(artist, album, { fields = 'genre,year', overwriteYear = false, apply = false } = {}) {
+  return start('/enrich', { artist, album, fields, overwriteYear: overwriteYear ? '1' : '', apply: apply ? '1' : '' })
 }
 // LRCLIB → USLT (+ .lrc sidecar) per track. Reports per-track progress.
 export function startEnrichLyrics(artist, album, { apply = false } = {}) {

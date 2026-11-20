@@ -231,7 +231,7 @@
           <div class="flex items-start gap-3">
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium">Genre + year</div>
-              <div class="text-xs text-stone-500">MusicBrainz, Last.fm fallback — only fills missing values</div>
+              <div class="text-xs text-stone-500">MusicBrainz — only fills missing values</div>
               <label class="text-xs text-stone-600 flex items-center gap-1.5 cursor-pointer mt-1">
                 <input v-model="overwriteYear" type="checkbox" class="accent-amber-700" />
                 overwrite existing year with MusicBrainz' oldest release date
@@ -370,7 +370,6 @@
 <script setup>
 import { ref, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useConfigStore } from '../stores/config'
 import { useJobsStore } from '../stores/jobs'
 import { search, getArtist, coverUrl, startScan, getScanStatus } from '../api/subsonic'
 import {
@@ -380,7 +379,6 @@ import {
 import { fetchRating } from '../api/chat'
 import { useRatingsStore } from '../stores/ratings'
 
-const config = useConfigStore()
 const jobsStore = useJobsStore()
 const { activeJobs, result, busy } = storeToRefs(jobsStore)
 const { launchJob } = jobsStore
@@ -548,16 +546,16 @@ const overwriteYear = ref(false)
 
 function enrichPreview() {
   for (const t of targets()) {
-    launchJob(() => startEnrich(t.artist, t.album, { fields: 'genre,year', lastfmKey: config.lastfmKey, overwriteYear: overwriteYear.value }), `Preview enrich — ${t.album}`)
+    launchJob(() => startEnrich(t.artist, t.album, { fields: 'genre,year', overwriteYear: overwriteYear.value }), `Preview enrich — ${t.album}`)
   }
 }
 function enrichApply() {
   const ts = targets(); if (!ts.length) return
   const verb = overwriteYear.value ? 'Fill missing genre + overwrite year' : 'Fill missing genre + year'
   const scope = selectedArtist.value ? ` across ${ts.length} albums by ${selectedArtist.value.name}` : ''
-  if (!window.confirm(`${verb}${scope} (MusicBrainz, Last.fm fallback)?`)) return
+  if (!window.confirm(`${verb}${scope} (MusicBrainz)?`)) return
   for (const t of ts) {
-    launchJob(() => startEnrich(t.artist, t.album, { fields: 'genre,year', lastfmKey: config.lastfmKey, overwriteYear: overwriteYear.value, apply: true }), `Enrich genre + year — ${t.album}`)
+    launchJob(() => startEnrich(t.artist, t.album, { fields: 'genre,year', overwriteYear: overwriteYear.value, apply: true }), `Enrich genre + year — ${t.album}`)
   }
 }
 function lyricsPreview() {

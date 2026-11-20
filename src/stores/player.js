@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useConfigStore } from './config'
-import { scrobble, coverUrl } from '../api/subsonic'
+import { coverUrl } from '../api/subsonic'
+import { scrobble } from '../api/scrobbles'
 
 export const usePlayerStore = defineStore('player', () => {
   const config = useConfigStore()
@@ -39,7 +40,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentTime.value = audio.currentTime
     if (!scrobbleSubmitted && audio.currentTime >= scrobbleThreshold) {
       scrobbleSubmitted = true
-      scrobble(currentTrack.value.id, true).catch(() => {})
+      scrobble(currentTrack.value).catch(e => console.error('[player] scrobble failed:', e))
     }
     if ('mediaSession' in navigator && duration.value > 0) {
       try {
@@ -84,7 +85,6 @@ export const usePlayerStore = defineStore('player', () => {
     currentTrack.value = track
     audio.src = streamUrl(track.id)
     audio.play().catch(e => { if (e.name !== 'AbortError') console.error('[player] play failed:', e) })
-    scrobble(track.id, false).catch(() => {})
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title:   track.title  || '',

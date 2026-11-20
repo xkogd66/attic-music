@@ -165,6 +165,24 @@ async function getRating(artist, album, force = false) {
   return r;
 }
 
+// ── Scrobbles ───────────────────────────────────────────────────────────
+// The app's own scrobbler (replaces Last.fm): rows in ClickHouse
+// music.scrobbles (ts DateTime, artist, album, track, mbid), all lowercase to
+// match the library's tags. Talks to ClickHouse's HTTP interface — no client lib.
+const CLICKHOUSE_URL = process.env.CLICKHOUSE_URL;
+const CLICKHOUSE_AUTH =
+  "Basic " + Buffer.from(`${process.env.CLICKHOUSE_USER || "default"}:${process.env.CLICKHOUSE_PASSWORD || ""}`).toString("base64");
+
+async function clickhouse(sql, body) {
+  const res = await fetch(`${CLICKHOUSE_URL}/?query=${encodeURIComponent(sql)}`, {
+    method: "POST",
+    headers: { Authorization: CLICKHOUSE_AUTH },
+    body,
+  });
+  if (!res.ok) throw new Error(`ClickHouse ${res.status}: ${await res.text()}`);
+  return res.text();
+}
+
 const TOOLS = [
   {
     name: "search_music",
@@ -359,21 +377,58 @@ const server = createServer((req, res) => {
   }
 
   const url = new URL(req.url, "http://localhost");
+  const json = (code, body) => res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(body));
+  // Not 5xx on upstream failures: Cloudflare replaces 502 bodies with its own page, hiding err.message.
+  const upstreamError = (err) => {
+    console.error(err);
+    json(424, { error: err.message });
+  };
+
+  if (url.pathname === "/scrobbles") {
+    if (req.method === "GET") {
+      const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit"), 10) || 5, 1), 100);
+      clickhouse(
+        `SELECT toUnixTimestamp(ts) AS uts, artist, album, track FROM music.scrobbles ORDER BY ts DESC LIMIT ${limit} FORMAT JSON`,
+      ).then((text) => json(200, JSON.parse(text).data), upstreamError);
+      return;
+    }
+    if (req.method === "POST") {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        let s;
+        try {
+          s = JSON.parse(body);
+        } catch {
+          return json(400, { error: "body must be JSON" });
+        }
+        const { artist, album = "", track } = s ?? {};
+        if (!artist || !track || typeof artist !== "string" || typeof track !== "string" || typeof album !== "string") {
+          return json(400, { error: "artist and track are required strings" });
+        }
+        // Timestamped by the server, not the client.
+        const row = {
+          ts: Math.floor(Date.now() / 1000),
+          artist: artist.toLowerCase(),
+          album: album.toLowerCase(),
+          track: track.toLowerCase(),
+        };
+        clickhouse("INSERT INTO music.scrobbles FORMAT JSONEachRow", JSON.stringify(row)).then(
+          () => json(201, row),
+          upstreamError,
+        );
+      });
+      return;
+    }
+  }
+
   if (url.pathname === "/ratings") {
-    const json = (code, body) => res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(body));
     if (req.method === "GET") return json(200, ratings);
     if (req.method === "POST") {
       const artist = url.searchParams.get("artist");
       const album = url.searchParams.get("album");
       if (!artist || !album) return json(400, { error: "artist and album are required" });
-      getRating(artist, album, url.searchParams.get("force") === "1").then(
-        (r) => json(200, r),
-        (err) => {
-          console.error(err);
-          // Not 5xx: Cloudflare replaces 502 bodies with its own page, hiding err.message.
-          json(424, { error: err.message });
-        },
-      );
+      getRating(artist, album, url.searchParams.get("force") === "1").then((r) => json(200, r), upstreamError);
       return;
     }
   }

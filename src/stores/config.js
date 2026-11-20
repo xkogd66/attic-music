@@ -5,8 +5,6 @@ export const useConfigStore = defineStore('config', () => {
   const server     = ref('')
   const username   = ref('')
   const password   = ref('')
-  const lastfmUser       = ref('')
-  const lastfmKey        = ref('')
   const turnstileSiteKey = ref('')
   const loggedIn         = ref(false)
 
@@ -17,8 +15,6 @@ export const useConfigStore = defineStore('config', () => {
       const cfg = await res.json()
       if (cfg.server)     server.value     = cfg.server
       if (cfg.username)   username.value   = cfg.username
-      if (cfg.lastfmUser) lastfmUser.value = cfg.lastfmUser
-      if (cfg.lastfmKey)        lastfmKey.value        = cfg.lastfmKey
       if (cfg.turnstileSiteKey) turnstileSiteKey.value = cfg.turnstileSiteKey
     } catch(e) {}
 
@@ -39,5 +35,5 @@ export const useConfigStore = defineStore('config', () => {
     window.attic?.clearCredentials?.()
   }
 
-  return { server, username, password, lastfmUser, lastfmKey, turnstileSiteKey, loggedIn, load, saveSession, logout }
+  return { server, username, password, turnstileSiteKey, loggedIn, load, saveSession, logout }
 })

@@ -478,7 +478,7 @@ import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
 import { getArtists, getArtist, getAlbum, coverUrl, getNewestAlbums, getArtistGenreMap, downloadZip } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
-import { searchAlbumCovers, searchArtistImages, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
+import { searchArtistImages, sidecarAlbumCover, detailCoverSrc } from '../api/covers'
 import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem  from '../components/TrackItem.vue'
@@ -958,11 +958,11 @@ async function chooseCover(c) {
   )
 }
 
+// No online album-cover source (Last.fm retired): the modal opens for a
+// device upload only.
 async function openCoverSearch() {
   if (!currentAlbum.value) return
-  const artist = currentAlbum.value.albumArtist || currentAlbum.value.artist
-  const album  = currentAlbum.value.name
-  await searchCovers('album', add => searchAlbumCovers(artist, album, add))
+  await searchCovers('album', async () => {})
 }
 
 async function openAvatarSearch() {

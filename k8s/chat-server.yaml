@@ -65,6 +65,19 @@ spec:
                 secretKeyRef:
                   name: chat-server-secret
                   key: GONIC_PASSWORD
+            # ── Scrobbles (music.scrobbles in ClickHouse, namespace data) ──
+            - name: CLICKHOUSE_URL
+              value: http://clickhouse.data:8123
+            - name: CLICKHOUSE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: CLICKHOUSE_USER
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: CLICKHOUSE_PASSWORD
       volumes:
         - name: data
           persistentVolumeClaim:

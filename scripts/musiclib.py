@@ -7,7 +7,7 @@ One interactive menu-driven tool replacing ~30 individual scripts.
 Sections:
   A  Cover Art       — fetch artist thumbs / album covers / embed / extract
   B  Tags Cleanup    — sanitize / sort-tags / lowercase / TPE2 / nuclear / rename
-  C  Tags Enrich     — genre+year (MusicBrainz+Last.fm) / MB tagger / lyrics
+  C  Tags Enrich     — genre+year (MusicBrainz) / MB tagger / lyrics
   D  Audit           — golden-set report / file diff / folder diff
   E  Convert         — FLAC→MP3 / WAV→FLAC / M4A→MP3
   F  Utilities       — MP3 splitter / macOS junk purge
@@ -63,7 +63,6 @@ IMG_NAMES     = {'cover.jpg','cover.jpeg','cover.png','folder.jpg','folder.jpeg'
 MB_API     = "https://musicbrainz.org/ws/2"
 DDZ_API    = "https://api.deezer.com"
 FANART_API = "https://webservice.fanart.tv/v3/music"
-LASTFM_API = "https://ws.audioscrobbler.com/2.0/"
 LRCLIB_API = "https://lrclib.net/api/get"
 
 GENERIC_GENRES = {
@@ -91,7 +90,6 @@ def load_config():
     global CFG
     defaults = {
         "fanart_key":           os.environ.get("FANART_API_KEY", "534d55e821819637a0fa7fea2dd0bca4"),
-        "lastfm_key":           os.environ.get("LASTFM_API_KEY", ""),
         "mb_email":             "ekskog@gmail.com",
         "default_library_path": "",
     }
@@ -476,36 +474,6 @@ def _deezer_get_image(endpoint: str, query: str, url_key: str, fallback_key: str
         return None
 
 
-def fetch_album_cover_lastfm(artist_name: str, album_name: str) -> bytes:
-    key = CFG.get("lastfm_key", "")
-    if not key:
-        return None
-    clean_artist = artist_name.replace("_", " ").strip()
-    clean_album  = re.sub(r"^\d{4}[-_]", "", album_name).replace("_", " ").strip()
-    try:
-        r = requests.get(LASTFM_API, params={
-            "method": "album.getinfo",
-            "artist": clean_artist,
-            "album": clean_album,
-            "autocorrect": 1,
-            "api_key": key,
-            "format": "json",
-        }, headers=_headers(), timeout=10)
-        data   = r.json()
-        images = data.get("album", {}).get("image", [])
-        url = None
-        for size in ("mega", "extralarge", "large"):
-            url = next((img.get("#text") for img in images
-                       if img.get("size") == size and img.get("#text")), None)
-            if url:
-                break
-        if not url:
-            return None
-        return _ensure_real_jpeg(requests.get(url, timeout=15).content)
-    except Exception:
-        return None
-
-
 def fetch_artist_thumb_deezer(artist_name: str) -> bytes:
     return _deezer_get_image("search/artist", artist_name, "picture_xl", "picture_big")
 
@@ -542,13 +510,13 @@ def normalize_album_artwork(path: Path, level: str = None):
     Per album, in order:
       1. Image file in folder → embed into all MP3 APIC (replacing any existing)
       2. No image → extract APIC from tags → save as cover.jpg → embed all
-      3. Nothing anywhere → fetch from Last.fm → save cover.jpg → embed all
+      3. Nothing anywhere → reported as missing
     """
     albums = list(iter_albums(path, level))
     if not albums:
         print("  No albums found.")
         return
-    stats    = {"from_folder": 0, "from_tags": 0, "from_lastfm": 0, "missing": 0, "files": 0, "errors": 0}
+    stats    = {"from_folder": 0, "from_tags": 0, "missing": 0, "files": 0, "errors": 0}
     log_path = setup_logging("normalize_artwork")
     IMG_ORDER = ("cover.jpg", "cover.jpeg", "cover.png", "folder.jpg", "folder.jpeg", "front.jpg")
     with open(log_path, "w") as log:
@@ -588,21 +556,12 @@ def normalize_album_artwork(path: Path, level: str = None):
                             break
                     except Exception:
                         continue
-            # 3. fetch from Last.fm
+            # 3. nothing found
             if img_data is None:
-                print(f"  [{i}/{len(albums)}] {album.parent.name}/{album.name} — fetching…", end="\r")
-                data = fetch_album_cover_lastfm(album.parent.name, album.name)
-                if data:
-                    img_data = data
-                    (album / "cover.jpg").write_bytes(data)
-                    stats["from_lastfm"] += 1
-                    label = "lastfm"
-                    log.write(f"FETCHED {album.parent.name}/{album.name}\n")
-                else:
-                    stats["missing"] += 1
-                    print(f"  [{i}/{len(albums)}] {album.parent.name}/{album.name} — no art found      ")
-                    log.write(f"MISS {album.parent.name}/{album.name}\n")
-                    continue
+                stats["missing"] += 1
+                print(f"  [{i}/{len(albums)}] {album.parent.name}/{album.name} — no art found      ")
+                log.write(f"MISS {album.parent.name}/{album.name}\n")
+                continue
             # embed into every MP3
             n_ok = n_err = 0
             for mp3 in mp3s:
@@ -623,7 +582,6 @@ def normalize_album_artwork(path: Path, level: str = None):
     print(f"\n  Albums: {len(albums)}"
           f"  |  folder: {stats['from_folder']}"
           f"  extracted: {stats['from_tags']}"
-          f"  fetched: {stats['from_lastfm']}"
           f"  missing: {stats['missing']}")
     print(f"  Files updated: {stats['files']}  Errors: {stats['errors']}")
     print(f"  Log: {log_path}")
@@ -635,7 +593,7 @@ def run_section_cover_art():
   A. Cover Art
   ─────────────────────────────────────────────────────────
   1  Normalize artwork
-     folder cover.jpg → embed  |  APIC → extract+embed  |  Last.fm → fetch+embed
+     folder cover.jpg → embed  |  APIC → extract+embed
   0  Back""")
         choice = input("\n  Choice: ").strip()
         if choice in ("0", "q"):
@@ -1132,45 +1090,14 @@ def _mb_year(releases: list) -> int:
     return min(years) if years else None
 
 
-def _lastfm_genre(artist: str, album: str) -> str:
-    key = CFG.get("lastfm_key","")
-    if not key:
-        return None
-    for params in [
-        {"method":"album.getTopTags", "artist": artist, "album": album, "autocorrect": 1},
-        {"method":"artist.getTopTags","artist": artist, "autocorrect": 1},
-    ]:
-        try:
-            r = requests.get(LASTFM_API, params={**params, "api_key":key, "format":"json"},
-                             headers=_headers(), timeout=10)
-            data = r.json()
-            if "error" in data:
-                continue
-            key2 = "album" if "album" in params["method"] else "artist"
-            raw  = data.get(key2, {}).get("toptags", {}).get("tag", [])
-            if isinstance(raw, dict):
-                raw = [raw]
-            items = [{"name":t["name"],"count":int(t.get("count",0))}
-                     for t in raw if t.get("name")]
-            g = _pick_best_genre(items)
-            if g:
-                return g
-        except Exception:
-            pass
-        time.sleep(0.3)
-    return None
-
-
 # ── main enrich function ──────────────────────────────────────────────────────
 
 def enrich_genre_year(path: Path, do_genre: bool, do_year: bool):
-    """Fill missing genre/year via MusicBrainz + Last.fm (two-pass)."""
+    """Fill missing genre/year via MusicBrainz (two-pass)."""
     mp3_folders = sorted({f.parent for f in path.rglob("*.mp3")})
     if not mp3_folders:
         print("  No MP3 folders found.")
         return
-    if do_genre and not CFG.get("lastfm_key"):
-        print("  [i] No Last.fm key → Last.fm fallback disabled. Set it in G → Config.")
     mode     = " + ".join((["genre"] if do_genre else []) + (["year"] if do_year else []))
     total    = len(mp3_folders)
     log_path = setup_logging(f"enrich_{mode.replace(' + ','_')}")
@@ -1212,8 +1139,6 @@ def enrich_genre_year(path: Path, do_genre: bool, do_year: bool):
             if need_genre:
                 if releases:
                     genre = _mb_genre(releases)
-                if not genre:
-                    genre = _lastfm_genre(artist or "", album or "")
                 if genre:
                     artist_genres.setdefault((artist or "").lower(), []).append(genre)
                 else:
@@ -1256,8 +1181,6 @@ def enrich_genre_year(path: Path, do_genre: bool, do_year: bool):
                 known    = artist_genres.get(akey, [])
                 if known:
                     fallback = Counter(known).most_common(1)[0][0]
-                if not fallback:
-                    fallback = _lastfm_genre(entry["artist"] or "", entry["album"] or "")
                 if fallback:
                     for mp3 in entry["mp3s"]:
                         try:
@@ -1500,7 +1423,7 @@ def run_section_tag_enrich():
         print("""
   C. Tags — Enrich
   ─────────────────────────────────────────────────────────
-  1  Fill missing genre tags       (MusicBrainz + Last.fm two-pass)
+  1  Fill missing genre tags       (MusicBrainz two-pass)
   2  Fill missing year tags        (MusicBrainz oldest release)
   3  Fill genre + year             (combined, most efficient)
   4  Interactive MusicBrainz tagger  (search → select → full tag set + art)
@@ -1868,12 +1791,10 @@ def run_section_utilities():
 
 def run_section_config():
     while True:
-        lastfm_status = "set" if CFG.get("lastfm_key") else "NOT SET"
         fanart_preview = (CFG.get("fanart_key","")[:8] + "…") if CFG.get("fanart_key") else "NOT SET"
         print(f"""
   G. Configuration
   ─────────────────────────────────────────────────────────
-  1  Last.fm API key       [{lastfm_status}]
   2  Fanart.tv API key     [{fanart_preview}]
   3  MusicBrainz email     [{CFG.get('mb_email','')}]
   4  Default library path  [{CFG.get('default_library_path','') or 'not set'}]
@@ -1883,12 +1804,7 @@ def run_section_config():
         if choice in ("0", "q"):
             return
         try:
-            if choice == "1":
-                v = input("  Last.fm API key (https://www.last.fm/api/account/create): ").strip()
-                if v:
-                    CFG["lastfm_key"] = v
-                    save_config()
-            elif choice == "2":
+            if choice == "2":
                 v = input("  Fanart.tv API key: ").strip()
                 if v:
                     CFG["fanart_key"] = v

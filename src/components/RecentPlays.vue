@@ -43,7 +43,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getRecentTracks, findLibraryAlbum } from '../api/lastfm'
+import { getRecentScrobbles, findLibraryAlbum } from '../api/scrobbles'
 
 const router = useRouter()
 
@@ -54,7 +54,7 @@ let timer = null
 
 async function fetchScrobbles() {
   try {
-    const fresh = await getRecentTracks(5)
+    const fresh = await getRecentScrobbles(5)
     // Carry over misses already resolved so answered lookups aren't dropped
     // on every poll.
     const prev = new Map(scrobbles.value.map(s => [`${s.artist}\n${s.track}`, s]))
@@ -62,12 +62,8 @@ async function fetchScrobbles() {
       const old = prev.get(`${s.artist}\n${s.track}`)
       return old ? { ...s, missing: old.missing } : s
     })
-  } catch (e) {
-    if (e.permanent) {
-      clearInterval(timer)
-      timer = null
-    }
-    // transient errors (network etc.) — keep polling
+  } catch (_) {
+    // keep polling — the next tick retries
   }
 }
 

@@ -886,7 +886,7 @@ func convertAlbum(dir, to, bitrate string, deleteOriginal, apply bool, j *job) (
 	return changes, nil
 }
 
-// ── enrich (genre/year via MusicBrainz + Last.fm, lyrics via LRCLIB) ────────
+// ── enrich (genre/year via MusicBrainz, lyrics via LRCLIB) ────────
 
 const mbAPI = "https://musicbrainz.org/ws/2"
 
@@ -1060,46 +1060,7 @@ func mbYear(releases []map[string]interface{}) string {
 	return strconv.Itoa(min)
 }
 
-func lastfmGenre(key, artist, album string) string {
-	base := "https://ws.audioscrobbler.com/2.0/?api_key=" + key + "&format=json"
-	for _, method := range []string{
-		"album.getTopTags&artist=" + url.QueryEscape(artist) + "&album=" + url.QueryEscape(album) + "&autocorrect=1",
-		"artist.getTopTags&artist=" + url.QueryEscape(artist) + "&autocorrect=1",
-	} {
-		var d struct {
-			Album  struct {
-				Toptags struct {
-					Tag []map[string]interface{} `json:"tag"`
-				} `json:"toptags"`
-			} `json:"album"`
-			Artist struct {
-				Toptags struct {
-					Tag []map[string]interface{} `json:"tag"`
-				} `json:"toptags"`
-			} `json:"artist"`
-			Error *struct{ Message string `json:"message"` } `json:"error"`
-		}
-		if err := getJSON(base+"&method="+method, &d); err != nil {
-			continue
-		}
-		if d.Error != nil {
-			continue
-		}
-		var items []map[string]interface{}
-		if strings.HasPrefix(method, "album.") {
-			items = d.Album.Toptags.Tag
-		} else {
-			items = d.Artist.Toptags.Tag
-		}
-		if g := pickGenre(items); g != "" {
-			return g
-		}
-		time.Sleep(300 * time.Millisecond)
-	}
-	return ""
-}
-
-func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, overwriteYear, apply bool, j *job) ([]change, error) {
+func enrichGenreYear(dir string, doGenre, doYear, overwriteYear, apply bool, j *job) ([]change, error) {
 	mp3s := mp3Names(dir)
 	if len(mp3s) == 0 {
 		return nil, nil
@@ -1130,10 +1091,6 @@ func enrichGenreYear(dir, lastfmKey string, doGenre, doYear, overwriteYear, appl
 	var genre, year string
 	if needGenre {
 		genre = mbGenre(rel)
-		if genre == "" && lastfmKey != "" {
-			j.setMessage("searching Last.fm")
-			genre = lastfmGenre(lastfmKey, artist, album)
-		}
 	}
 	yearConfirmed := false
 	if needYear {
@@ -1729,7 +1686,7 @@ func main() {
 	})
 
 	// ── musiclib fold: enrich ────────────────────────────────────────────
-	// POST /enrich?artist=&album=&fields=genre,year&lastfmKey=...&overwriteYear=1&apply=1
+	// POST /enrich?artist=&album=&fields=genre,year&overwriteYear=1&apply=1
 	// overwriteYear=1 re-fetches the oldest MusicBrainz release year and replaces
 	// TDRC even when the album already has one (normal runs only fill blanks).
 	http.HandleFunc("/enrich", func(w http.ResponseWriter, r *http.Request) {
@@ -1746,7 +1703,7 @@ func main() {
 		apply         := r.FormValue("apply") == "1"
 		overwriteYear := r.FormValue("overwriteYear") == "1"
 		id := startJob("enrich", apply, dir, func(j *job) {
-			changes, err := enrichGenreYear(dir, r.FormValue("lastfmKey"),
+			changes, err := enrichGenreYear(dir,
 				strings.Contains(fields, "genre"), strings.Contains(fields, "year"), overwriteYear, apply, j)
 			if err != nil {
 				j.fail(err)

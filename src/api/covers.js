@@ -1,66 +1,7 @@
-import { useConfigStore } from '../stores/config'
 import { startScan } from './subsonic'
-
-// Last.fm's "no image" placeholder — the same grey star is returned for every
-// album it has no art for, so we drop any URL containing this hash.
-const LASTFM_PLACEHOLDER = '2a96cbd8b46e442fc41c2b86b821562f'
 
 // A hung upstream must not hold the picker open forever.
 const FETCH_TIMEOUT_MS = 8000
-
-const LASTFM_SIZE_RANK = { small: 1, medium: 2, large: 3, extralarge: 4, mega: 5, '': 0 }
-
-function ensureArray(val) {
-  if (!val) return []
-  return Array.isArray(val) ? val : [val]
-}
-
-// Pick the largest usable URL from a Last.fm image[] array.
-function bestLastfmImage(images) {
-  let best = null, rank = -1
-  for (const img of ensureArray(images)) {
-    const url = img['#text']
-    if (!url || url.includes(LASTFM_PLACEHOLDER)) continue
-    const r = LASTFM_SIZE_RANK[img.size] ?? 0
-    if (r > rank) { rank = r; best = url }
-  }
-  return best
-}
-
-// Last.fm: the exact album (album.getInfo) plus broader name matches
-// (album.search), each contributing its largest cover. The two calls run in
-// parallel and each reports via onResult as soon as it lands.
-async function lastfmCovers(artist, album, onResult) {
-  const config = useConfigStore()
-  if (!config.lastfmKey) return []
-
-  const base = `https://ws.audioscrobbler.com/2.0/?api_key=${encodeURIComponent(config.lastfmKey)}&format=json`
-  const call = async (query, pick) => {
-    try {
-      const res  = await fetch(`${base}&${query}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
-      const urls = pick(await res.json()).filter(Boolean)
-      const out  = urls.map(url => ({ url, source: 'Last.fm' }))
-      if (out.length) onResult?.(out)
-      return out
-    } catch (_) { return [] }
-  }
-
-  const lists = await Promise.all([
-    call(`method=album.getinfo&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`,
-      j => [bestLastfmImage(j?.album?.image)]),
-    call(`method=album.search&album=${encodeURIComponent(album)}&limit=10`,
-      j => ensureArray(j?.results?.albummatches?.album).map(m => bestLastfmImage(m.image))),
-  ])
-  const seen = new Set()
-  return lists.flat().filter(c => !seen.has(c.url) && seen.add(c.url))
-}
-
-// Aggregate cover candidates for an album — Last.fm only.
-// Returns [{ url, source }]. The CDN sends Access-Control-Allow-Origin: *, so
-// the caller can fetch the chosen URL's bytes to re-upload as cover.jpg.
-export async function searchAlbumCovers(artist, album, onResult) {
-  return lastfmCovers(artist, album, onResult)
-}
 
 const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php'
 
@@ -130,7 +71,7 @@ async function wikipediaArtistImages(name, onResult) {
   return out
 }
 
-// Aggregate image candidates for an artist — same shape as searchAlbumCovers.
+// Aggregate image candidates for an artist — [{ url, source }].
 export async function searchArtistImages(name, onResult) {
   return wikipediaArtistImages(name, onResult)
 }

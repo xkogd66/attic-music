@@ -140,7 +140,7 @@
     <LibraryFilters v-if="showFilters" />
 
     <!-- SCROBBLES -->
-    <RecentPlays v-if="config.lastfmUser && config.lastfmKey" />
+    <RecentPlays />
 
     <!-- FOOTER: sign out · rescan · mini player -->
     <div class="flex-shrink-0 flex items-center px-6 py-4 justify-between">

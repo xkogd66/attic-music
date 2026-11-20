@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-// Shared "pick a cover" modal: search Last.fm candidates, then upload a
+// Shared "pick a cover" modal: search online candidates, then upload a
 // chosen one or a device file to the sidecar. Building the sidecar URL and
 // applying the result (album cover vs. artist avatar have different
 // endpoints and different post-upload state to update) stays with the caller.
