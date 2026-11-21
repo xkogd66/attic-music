@@ -78,7 +78,7 @@ func normalize(s string) string {
 }
 
 
-func buildMap(root string) {
+func buildMap(root string, withTags bool) {
 	freshArtist     := map[string]string{}
 	freshAlbum      := map[string]string{}
 	freshAlbumDirs  := map[string]string{}
@@ -124,7 +124,7 @@ func buildMap(root string) {
 				// Also key the folder by its tags (album artist|album of the first
 				// mp3): that is the name gonic shows, and it often differs from the
 				// folder name (typos, punctuation, renamed folders).
-				if names := mp3Names(albumDir); len(names) > 0 {
+				if names := mp3Names(albumDir); withTags && len(names) > 0 {
 					if tag, err := id3v2.Open(filepath.Join(albumDir, names[0]), id3v2.Options{Parse: true, ParseFrames: []string{"Album", "Artist", "Band"}}); err == nil {
 						tagArtist := tag.GetTextFrame(tag.CommonID("Band")).Text
 						if tagArtist == "" {
@@ -1218,7 +1218,10 @@ func main() {
 	}
 	musicRoot = root
 	logRequests = strings.ToLower(os.Getenv("LOG_REQUESTS")) == "true"
-	buildMap(root)
+	buildMap(root, false)
+	// The tag pass reads one mp3 per album over NFS (minutes on a big library),
+	// so it runs after the server is up; until then lookups use folder names only.
+	go buildMap(root, true)
 	if len(coverMap) == 0 {
 		log.Fatalf("no artist covers found in %s — NFS not ready?", root)
 	}
@@ -1228,7 +1231,7 @@ func main() {
 			if logRequests {
 				log.Printf("rescanning %s", root)
 			}
-			buildMap(root)
+			buildMap(root, true)
 		}
 	}()
 
@@ -1761,7 +1764,7 @@ func main() {
 		}
 		id := startJob("rescan", true, "", func(j *job) {
 			j.setMessage("rescanning " + root)
-			buildMap(root)
+			buildMap(root, true)
 			j.done([]change{{File: "library", Detail: fmt.Sprintf("indexed %d album folders, %d artist folders", len(albumDirMap), len(artistDirMap))}}, nil)
 		})
 		writeJobAccepted(w, id)
