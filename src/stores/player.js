@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useConfigStore } from './config'
-import { coverUrl } from '../api/subsonic'
+import { trackCover } from '../api/covers'
 import { scrobble } from '../api/scrobbles'
 
 export const usePlayerStore = defineStore('player', () => {
@@ -90,9 +90,7 @@ export const usePlayerStore = defineStore('player', () => {
         title:   track.title  || '',
         artist:  track.artist || '',
         album:   track.album  || '',
-        artwork: track.coverArt
-          ? [{ src: coverUrl(track.coverArt, 512), sizes: '512x512', type: 'image/jpeg' }]
-          : [],
+        artwork: [{ src: new URL(trackCover(track), location.href).href, type: 'image/jpeg' }],
       })
     }
   }

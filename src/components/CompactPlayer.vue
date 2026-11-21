@@ -10,7 +10,7 @@
       title="Expand player"
       @click="emit('expand')"
     >
-      <img v-if="player.currentTrack?.coverArt" :src="coverUrl(player.currentTrack.coverArt)" class="w-full h-full object-cover" @error="onImgError" />
+      <img v-if="player.currentTrack" :src="trackCover(player.currentTrack)" class="w-full h-full object-cover" @error="onImgError" />
       <span v-else>🎵</span>
     </button>
 
@@ -62,7 +62,7 @@
 import { ref } from 'vue'
 import { Play, Pause, SkipBack, SkipForward, ChevronsUp } from 'lucide-vue-next'
 import { usePlayerStore } from '../stores/player'
-import { coverUrl } from '../api/subsonic'
+import { trackCover } from '../api/covers'
 
 const player     = usePlayerStore()
 const emit       = defineEmits(['expand'])

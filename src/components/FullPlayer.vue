@@ -45,8 +45,8 @@
           <div v-if="!lyricsView" class="flex-1 min-h-0 flex items-center justify-center py-2">
             <div class="h-full max-w-full aspect-square bg-amber-50 overflow-hidden shadow-2xl rounded-2xl">
               <img
-                v-if="player.currentTrack?.coverArt"
-                :src="coverUrl(player.currentTrack.coverArt, 600)"
+                v-if="player.currentTrack"
+                :src="trackCover(player.currentTrack)"
                 class="w-full h-full object-cover"
                 @error="onImgError"
               />
@@ -177,7 +177,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { Shuffle, Repeat, Play, Pause, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-vue-next'
 import { usePlayerStore } from '../stores/player'
-import { coverUrl } from '../api/subsonic'
+import { trackCover } from '../api/covers'
 import { fetchLyrics, saveManualLyrics } from '../api/lyrics'
 
 const props = defineProps({

@@ -121,6 +121,21 @@ func buildMap(root string) {
 				key := normalize(artist.Name()) + "|" + normalize(albumName)
 				albumDir := filepath.Join(artistDir, album.Name())
 				freshAlbumDirs[key] = albumDir
+				// Also key the folder by its tags (album artist|album of the first
+				// mp3): that is the name gonic shows, and it often differs from the
+				// folder name (typos, punctuation, renamed folders).
+				if names := mp3Names(albumDir); len(names) > 0 {
+					if tag, err := id3v2.Open(filepath.Join(albumDir, names[0]), id3v2.Options{Parse: true, ParseFrames: []string{"Album", "Artist", "Band"}}); err == nil {
+						tagArtist := tag.GetTextFrame(tag.CommonID("Band")).Text
+						if tagArtist == "" {
+							tagArtist = tag.Artist()
+						}
+						if tagKey := normalize(tagArtist) + "|" + normalize(tag.Album()); tag.Album() != "" {
+							freshAlbumDirs[tagKey] = albumDir
+						}
+						tag.Close()
+					}
+				}
 				albumCover := filepath.Join(albumDir, "cover.jpg")
 				if _, err := os.Stat(albumCover); err == nil {
 					freshAlbum[key] = albumCover

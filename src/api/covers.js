@@ -1,4 +1,4 @@
-import { startScan, coverUrl } from './subsonic'
+import { startScan } from './subsonic'
 
 // A hung upstream must not hold the picker open forever.
 const FETCH_TIMEOUT_MS = 8000
@@ -80,7 +80,7 @@ export async function searchArtistImages(name, onResult) {
 // gonic: gonic only notices new art on a scan and caches stale thumbnails. The
 // sidecar stats the file per request and sends no-cache, so a replaced cover
 // shows at once. `dir` (folder path) makes the lookup exact; without it the
-// sidecar matches artist|album names against folder names.
+// sidecar matches artist|album against its index of tag names and folder names.
 export function albumCover(album, dir) {
   const artist = album.albumArtist || album.artist
   const q = new URLSearchParams({ artist, album: album.name })
@@ -88,13 +88,10 @@ export function albumCover(album, dir) {
   return `/artist-images/album?${q}`
 }
 
-// <img @error> for album tiles: if the sidecar has no cover (tag names don't
-// match the folder names), try gonic's once, then show the placeholder.
-export function onAlbumCoverError(e, album) {
-  const img = e.target
-  if (img.dataset.gonic) { img.style.display = 'none'; return }
-  img.dataset.gonic = '1'
-  img.src = coverUrl(album.coverArt || album.id)
+// The playing track's album cover — same cover.jpg, folder taken from its path.
+export function trackCover(track) {
+  const dir = track.path ? track.path.split('/').slice(0, -1).join('/') : ''
+  return albumCover({ albumArtist: track.albumArtist, artist: track.artist, name: track.album }, dir)
 }
 
 // The sidecar embeds the cover into the mp3s in the background after its 202

@@ -6,7 +6,7 @@
 
     <!-- ALBUM ART -->
     <div class="aspect-square max-w-[45%] bg-amber-50 rounded overflow-hidden flex items-center justify-center text-3xl flex-shrink-0 self-center max-h-full">
-      <img v-if="player.currentTrack?.coverArt" :src="coverUrl(player.currentTrack.coverArt)" class="w-full h-full object-cover" @error="onImgError" />
+      <img v-if="player.currentTrack" :src="trackCover(player.currentTrack)" class="w-full h-full object-cover" @error="onImgError" />
       <span v-else>🎵</span>
     </div>
 
@@ -54,7 +54,7 @@ import { ref } from 'vue'
 import { Play, Pause, SkipBack, SkipForward, PanelLeftOpen } from 'lucide-vue-next'
 import { usePlayerStore } from '../stores/player'
 import { useUiStore } from '../stores/ui'
-import { coverUrl } from '../api/subsonic'
+import { trackCover } from '../api/covers'
 
 const player     = usePlayerStore()
 const ui         = useUiStore()

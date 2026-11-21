@@ -11,7 +11,7 @@
     <!-- TRACK INFO -->
     <div class="flex items-center gap-3 w-44 lg:w-60 flex-shrink-0 overflow-hidden">
       <div class="w-11 h-11 bg-amber-50 flex-shrink-0 overflow-hidden flex items-center justify-center text-xl rounded">
-        <img v-if="player.currentTrack?.coverArt" :src="coverUrl(player.currentTrack.coverArt)" class="w-full h-full object-cover" @error="onImgError" />
+        <img v-if="player.currentTrack" :src="trackCover(player.currentTrack)" class="w-full h-full object-cover" @error="onImgError" />
         <span v-else>🎵</span>
       </div>
       <div class="overflow-hidden">
@@ -202,7 +202,8 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { Shuffle, Repeat, Play, Pause, SkipBack, SkipForward, Volume1, Volume2, VolumeX, ChevronsDown, Download } from 'lucide-vue-next'
 import { usePlayerStore } from '../stores/player'
 import { useUiStore } from '../stores/ui'
-import { coverUrl, createPlaylist, downloadTrack } from '../api/subsonic'
+import { createPlaylist, downloadTrack } from '../api/subsonic'
+import { trackCover } from '../api/covers'
 import { fetchLyrics, saveManualLyrics } from '../api/lyrics'
 import CompactPlayer from './CompactPlayer.vue'
 import MiniWindow from './MiniWindow.vue'

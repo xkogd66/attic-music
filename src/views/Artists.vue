@@ -215,7 +215,7 @@
             >
               <div class="aspect-square bg-amber-50 mb-1 overflow-hidden relative rounded">
                 <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-                <img :src="albumCover(album)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => onAlbumCoverError(e, album)" />
+                <img :src="albumCover(album)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                 <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
                   <button class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs pl-0.5" @click.stop="playAlbum(album)">▶</button>
                 </div>
@@ -239,7 +239,7 @@
               >
                 <div class="aspect-square bg-amber-50 rounded-xl overflow-hidden mb-1.5 relative">
                   <div class="w-full h-full flex items-center justify-center text-2xl">💿</div>
-                  <img :src="albumCover(album)" :alt="album.name" loading="lazy" class="absolute inset-0 w-full h-full object-cover" @error="e => onAlbumCoverError(e, album)" />
+                  <img :src="albumCover(album)" :alt="album.name" loading="lazy" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
                   <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
                     <button class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-xs pl-0.5" @click.stop="playAlbum(album)">▶</button>
                   </div>
@@ -478,7 +478,7 @@ import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
 import { getArtists, getArtist, getAlbum, getNewestAlbums, getArtistGenreMap, downloadZip } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
-import { searchArtistImages, sidecarAlbumCover, albumCover, onAlbumCoverError } from '../api/covers'
+import { searchArtistImages, sidecarAlbumCover, albumCover } from '../api/covers'
 import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem  from '../components/TrackItem.vue'
