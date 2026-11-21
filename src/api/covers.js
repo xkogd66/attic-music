@@ -1,4 +1,4 @@
-import { startScan } from './subsonic'
+import { startScan, getAlbum } from './subsonic'
 
 // A hung upstream must not hold the picker open forever.
 const FETCH_TIMEOUT_MS = 8000
@@ -86,6 +86,23 @@ export function albumCover(album, dir) {
   const q = new URLSearchParams({ artist, album: album.name })
   if (dir) q.set('dir', dir)
   return `/artist-images/album?${q}`
+}
+
+// <img @error> for album tiles: the name lookup missed, so get the album's real
+// folder from its first track's path (what the album page does) and retry the
+// same cover.jpg with an exact dir. Second miss = no cover.jpg → placeholder.
+export async function onAlbumCoverError(e, album) {
+  const img = e.target
+  if (img.dataset.dir) { img.style.display = 'none'; return }
+  img.dataset.dir = '1'
+  try {
+    const { tracks } = await getAlbum(album.id)
+    const dir = tracks[0]?.path?.split('/').slice(0, -1).join('/')
+    if (!dir) throw new Error('no path')
+    img.src = albumCover(album, dir)
+  } catch (_) {
+    img.style.display = 'none'
+  }
 }
 
 // The playing track's album cover — same cover.jpg, folder taken from its path.
