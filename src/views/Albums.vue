@@ -99,7 +99,7 @@
               >
                 <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
                   <div class="w-full h-full flex items-center justify-center text-3xl">💿</div>
-                  <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                  <img :src="albumCover(album)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => onAlbumCoverError(e, album)" />
                   <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
                     <button class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-sm pl-0.5" @click.stop="playAlbum(album)">▶</button>
                   </div>
@@ -127,7 +127,7 @@
             >
               <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
                 <div class="w-full h-full flex items-center justify-center text-3xl">💿</div>
-                <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                <img :src="albumCover(album)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => onAlbumCoverError(e, album)" />
                 <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
                   <button class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-sm pl-0.5" @click.stop="playAlbum(album)">▶</button>
                 </div>
@@ -155,7 +155,7 @@
             >
               <div class="aspect-square bg-amber-50 mb-1.5 overflow-hidden relative rounded-lg">
                 <div class="w-full h-full flex items-center justify-center text-3xl">💿</div>
-                <img :src="coverUrl(album.coverArt || album.id)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => e.target.style.display='none'" />
+                <img :src="albumCover(album)" :alt="album.name" class="absolute inset-0 w-full h-full object-cover" @error="e => onAlbumCoverError(e, album)" />
                 <div class="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
                   <button
                     class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-sm pl-0.5"
@@ -393,9 +393,9 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
-import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, coverUrl, getArtists, downloadZip } from '../api/subsonic'
+import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, getArtists, downloadZip } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
-import { sidecarAlbumCover, detailCoverSrc } from '../api/covers'
+import { sidecarAlbumCover, albumCover, onAlbumCoverError } from '../api/covers'
 import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem from '../components/TrackItem.vue'
@@ -749,7 +749,7 @@ async function openAlbum(album) {
     const data = await getAlbum(album.id)
     currentAlbum.value = { ...album, ...data.info }
     albumTracks.value  = data.tracks
-    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id), albumPath.value)
+    albumDetailCoverSrc.value = albumCover(currentAlbum.value, albumPath.value)
   } finally { loading.value = false }
 }
 
@@ -815,7 +815,7 @@ async function openAlbumById(id) {
     const data = await getAlbum(id)
     currentAlbum.value = data.info
     albumTracks.value  = data.tracks
-    albumDetailCoverSrc.value = detailCoverSrc(currentAlbum.value, coverUrl(currentAlbum.value.coverArt || currentAlbum.value.id), albumPath.value)
+    albumDetailCoverSrc.value = albumCover(currentAlbum.value, albumPath.value)
   } finally { loading.value = false }
 }
 

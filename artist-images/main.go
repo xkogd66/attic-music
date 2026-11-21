@@ -1225,22 +1225,21 @@ func main() {
 			http.Error(w, "missing artist or album param", http.StatusBadRequest)
 			return
 		}
-		key  := normalize(artist) + "|" + normalize(album)
-		path, ok := albumCoverMap[key]
-		if r.URL.Query().Get("dir") != "" {
-			dir, found := albumDirFor(r, artist, album)
-			path = filepath.Join(dir, "cover.jpg")
-			_, err := os.Stat(path)
-			ok = found && err == nil
-		}
-		if !ok {
+		// Stat cover.jpg on every request, so a new or replaced cover shows up
+		// immediately instead of after the next 30-minute index rebuild.
+		dir, found := albumDirFor(r, artist, album)
+		path := filepath.Join(dir, "cover.jpg")
+		_, err := os.Stat(path)
+		if !found || err != nil {
 			if logRequests {
 				log.Printf("MISS  album %q / %q (%.0fms)", artist, album, float64(time.Since(start).Microseconds())/1000)
 			}
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Cache-Control", "public, max-age=86400")
+		// no-cache = revalidate each time; ServeFile answers 304 off Last-Modified,
+		// so an unchanged cover costs a round trip, and a replaced one shows at once.
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, path)
 		if logRequests {
 			log.Printf("HIT   album %q / %q (%.0fms)", artist, album, float64(time.Since(start).Microseconds())/1000)

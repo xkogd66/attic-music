@@ -10,22 +10,25 @@
 
       <div v-if="error" class="text-sm text-red-700">{{ error }}</div>
 
-      <!-- YEARS: plays per year; click one to filter the list below -->
+      <!-- PLAYS PER YEAR: click a bar to filter everything below to that year -->
       <section class="bg-white rounded-xl border border-stone-200 p-4">
-        <h2 class="text-xs font-medium uppercase tracking-widest text-stone-600 mb-2">Year</h2>
-        <div class="flex flex-wrap gap-2">
-          <button
-            class="text-xs border rounded-full px-3 py-1.5 transition-colors"
-            :class="year === null ? 'border-amber-700 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-amber-700'"
-            @click="year = null"
-          >All time</button>
-          <button
-            v-for="y in years" :key="y.year"
-            class="text-xs border rounded-full px-3 py-1.5 transition-colors"
-            :class="year === y.year ? 'border-amber-700 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-amber-700'"
-            @click="year = y.year"
-          >{{ y.year }} <span class="text-stone-400">· {{ y.plays.toLocaleString() }}</span></button>
-        </div>
+        <BarChart
+          title="Plays per year"
+          :bars="yearBars"
+          selectable
+          :selected="year"
+          @select="y => (year = year === y ? null : y)"
+        />
+        <button
+          class="mt-3 text-xs border rounded-full px-3 py-1 transition-colors"
+          :class="year === null ? 'border-amber-700 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-amber-700'"
+          @click="year = null"
+        >All time</button>
+      </section>
+
+      <!-- PLAYS PER MONTH (selected year, or all years combined) -->
+      <section class="bg-white rounded-xl border border-stone-200 p-4">
+        <BarChart :title="`Plays per month · ${year ?? 'all time'}`" :bars="monthBars" />
       </section>
 
       <!-- TOP LIST -->
@@ -48,7 +51,7 @@
           <li
             v-for="(r, i) in rows" :key="i"
             class="grid items-center gap-3 py-1.5 border-b border-stone-100 last:border-0 text-sm"
-            style="grid-template-columns: 2rem 1fr auto"
+            style="grid-template-columns: 2rem 1fr 9rem"
           >
             <span class="text-stone-400 text-xs text-right">{{ i + 1 }}</span>
             <span class="truncate">
@@ -57,7 +60,13 @@
                 {{ r[by] }} <span class="text-stone-500">· {{ r.artist }}</span>
               </template>
             </span>
-            <span class="text-xs text-stone-600">{{ r.plays.toLocaleString() }}</span>
+            <!-- bar length relative to the #1 row -->
+            <span class="flex items-center gap-2">
+              <span class="flex-1 h-1.5">
+                <span class="block h-full rounded-r bg-amber-600" :style="{ width: `${(r.plays / rows[0].plays) * 100}%` }"></span>
+              </span>
+              <span class="text-xs text-stone-600 tabular-nums w-12 text-right">{{ r.plays.toLocaleString() }}</span>
+            </span>
           </li>
         </ol>
       </section>
@@ -69,8 +78,12 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { getScrobbleStats } from '../api/scrobbles'
+import BarChart from '../components/BarChart.vue'
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const years   = ref([])
+const months  = ref([])
 const year    = ref(null)
 const by      = ref('artist')
 const rows    = ref([])
@@ -78,6 +91,18 @@ const loading = ref(false)
 const error   = ref('')
 
 const totalPlays = computed(() => years.value.reduce((n, y) => n + y.plays, 0))
+
+// '07 … '26 once there are too many years for full labels to fit
+const yearBars = computed(() => years.value.map(y => ({
+  key: y.year, label: String(y.year), value: y.plays,
+  short: years.value.length > 12 ? `'${String(y.year).slice(2)}` : undefined,
+})))
+
+// always 12 bars — months with no plays are missing from the query result
+const monthBars = computed(() => MONTHS.map((label, i) => ({
+  key: i + 1, label, short: label[0],
+  value: months.value.find(m => m.month === i + 1)?.plays ?? 0,
+})))
 
 async function loadTop() {
   loading.value = true
@@ -91,7 +116,16 @@ async function loadTop() {
   }
 }
 
-watch([by, year], loadTop)
+async function loadMonths() {
+  try {
+    months.value = await getScrobbleStats({ by: 'month', year: year.value, limit: 12 })
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+watch(by, loadTop)
+watch(year, () => { loadTop(); loadMonths() })
 
 onMounted(async () => {
   try {
@@ -100,5 +134,6 @@ onMounted(async () => {
     error.value = e.message
   }
   loadTop()
+  loadMonths()
 })
 </script>

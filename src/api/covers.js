@@ -1,4 +1,4 @@
-import { startScan } from './subsonic'
+import { startScan, coverUrl } from './subsonic'
 
 // A hung upstream must not hold the picker open forever.
 const FETCH_TIMEOUT_MS = 8000
@@ -76,10 +76,26 @@ export async function searchArtistImages(name, onResult) {
   return wikipediaArtistImages(name, onResult)
 }
 
-// Albums whose cover was replaced this session, id → cache-buster. Reopening
-// an album otherwise rebuilds its cover from gonic's getCoverArt URL, which
-// still serves the old image (cached by the browser and by gonic until rescan).
-const replacedCovers = new Map()
+// Album covers come from the album folder's cover.jpg via the sidecar, not from
+// gonic: gonic only notices new art on a scan and caches stale thumbnails. The
+// sidecar stats the file per request and sends no-cache, so a replaced cover
+// shows at once. `dir` (folder path) makes the lookup exact; without it the
+// sidecar matches artist|album names against folder names.
+export function albumCover(album, dir) {
+  const artist = album.albumArtist || album.artist
+  const q = new URLSearchParams({ artist, album: album.name })
+  if (dir) q.set('dir', dir)
+  return `/artist-images/album?${q}`
+}
+
+// <img @error> for album tiles: if the sidecar has no cover (tag names don't
+// match the folder names), try gonic's once, then show the placeholder.
+export function onAlbumCoverError(e, album) {
+  const img = e.target
+  if (img.dataset.gonic) { img.style.display = 'none'; return }
+  img.dataset.gonic = '1'
+  img.src = coverUrl(album.coverArt || album.id)
+}
 
 // The sidecar embeds the cover into the mp3s in the background after its 202
 // (~2s for a typical album), and gonic only sees embedded art on a scan.
@@ -87,17 +103,9 @@ const replacedCovers = new Map()
 // mid-embed; the manual rescan in the sidebar covers that.
 const EMBED_SETTLE_MS = 6000
 
+// After an upload: same URL plus a cache-buster so the open page swaps the
+// image, and a gonic scan so players (which use gonic's embedded art) catch up.
 export function sidecarAlbumCover(artist, album, id, dir) {
-  const t = Date.now()
-  if (id) replacedCovers.set(id, t)
   setTimeout(() => startScan().catch(() => {}), EMBED_SETTLE_MS)
-  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(dir)}&t=${t}`
-}
-
-// The detail-page cover: the freshly uploaded one if there is one, else gonic's.
-export function detailCoverSrc(album, gonicUrl, dir) {
-  const t = replacedCovers.get(album.id)
-  if (!t) return gonicUrl
-  const artist = album.albumArtist || album.artist
-  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album.name)}&dir=${encodeURIComponent(dir)}&t=${t}`
+  return `/artist-images/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(dir)}&t=${Date.now()}`
 }

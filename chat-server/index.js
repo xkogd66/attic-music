@@ -190,7 +190,14 @@ async function clickhouse(sql, body, params = {}) {
 // Play counts grouped by artist / album / track / year, optionally narrowed to
 // one year and/or one artist. Shared by GET /scrobbles/stats (Stats page) and
 // the scrobble_stats LLM tool — fixed SQL shapes, never model-written SQL.
-const STATS_GROUPS = { artist: "artist", album: "artist, album", track: "artist, track", year: "toYear(ts) AS year" };
+const STATS_GROUPS = {
+  artist: "artist",
+  album: "artist, album",
+  track: "artist, track",
+  year: "toYear(ts) AS year",
+  month: "toMonth(ts) AS month",
+};
+const CHRONOLOGICAL = ["year", "month"];
 
 async function scrobbleStats({ by = "artist", year, artist, limit = 20 } = {}) {
   const group = STATS_GROUPS[by];
@@ -209,8 +216,8 @@ async function scrobbleStats({ by = "artist", year, artist, limit = 20 } = {}) {
   const sql =
     `SELECT ${group}, toUInt32(count()) AS plays FROM music.scrobbles` +
     (where.length ? ` WHERE ${where.join(" AND ")}` : "") +
-    ` GROUP BY ${by === "year" ? "year" : group}` +
-    ` ORDER BY ${by === "year" ? "year" : "plays DESC"} LIMIT ${n} FORMAT JSON`;
+    ` GROUP BY ${CHRONOLOGICAL.includes(by) ? by : group}` +
+    ` ORDER BY ${CHRONOLOGICAL.includes(by) ? by : "plays DESC"} LIMIT ${n} FORMAT JSON`;
   return JSON.parse(await clickhouse(sql, undefined, params)).data;
 }
 
@@ -246,13 +253,13 @@ const TOOLS = [
     name: "scrobble_stats",
     description:
       "Query the user's own listening history (every track they have played, with a timestamp). Returns play " +
-      "counts grouped by artist, album, track or year, most-played first (by year: chronological). Optionally " +
+      "counts grouped by artist, album, track, year or month (1-12), most-played first (year/month: chronological). Optionally " +
       "narrow to one calendar year and/or one artist. Names are stored lowercase. Use this for any question about " +
       "what the user has listened to, how often, or when.",
     input_schema: {
       type: "object",
       properties: {
-        by: { type: "string", enum: ["artist", "album", "track", "year"], description: "What to group plays by" },
+        by: { type: "string", enum: ["artist", "album", "track", "year", "month"], description: "What to group plays by" },
         year: { type: "integer", description: "Only count plays from this calendar year" },
         artist: { type: "string", description: "Only count plays of this artist (exact name)" },
         limit: { type: "integer", description: "Max rows to return (default 20, max 200)" },
