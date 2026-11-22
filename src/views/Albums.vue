@@ -395,7 +395,7 @@ import { usePlayerStore } from '../stores/player'
 import { useFiltersStore } from '../stores/filters'
 import { getAlbumPage, getNewestAlbums, getRandomAlbums, getAlbum, getArtists, downloadZip } from '../api/subsonic'
 import { saveAlbumTags, saveTrackTags } from '../api/tags'
-import { sidecarAlbumCover, albumCover, onAlbumCoverError } from '../api/covers'
+import { sidecarAlbumCover, albumCover, onAlbumCoverError, searchAlbumCovers } from '../api/covers'
 import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem from '../components/TrackItem.vue'
@@ -856,11 +856,11 @@ async function chooseCover(c) {
   )
 }
 
-// No online album-cover source (Last.fm retired): the modal opens for a
-// device upload only.
+// Cover candidates from MusicBrainz + Cover Art Archive; device upload stays available.
 async function openCoverSearch() {
   if (!currentAlbum.value) return
-  await searchCovers('album', async () => {})
+  const a = currentAlbum.value
+  await searchCovers('album', add => searchAlbumCovers(a.albumArtist || a.artist, a.name, add))
 }
 
 watch(() => route.params.id, (id) => {

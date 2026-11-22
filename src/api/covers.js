@@ -71,6 +71,26 @@ async function wikipediaArtistImages(name, onResult) {
   return out
 }
 
+// Album cover candidates: MusicBrainz release search → Cover Art Archive front
+// image per release. No key; both (and archive.org behind CAA's redirect) send
+// Access-Control-Allow-Origin: *, so the picker can fetch and re-upload the bytes.
+// Releases without art 404 — the modal already hides candidates that fail to load.
+export async function searchAlbumCovers(artist, album, onResult) {
+  const q = s => `"${s.replace(/["\\]/g, '')}"`
+  const url = `https://musicbrainz.org/ws/2/release/?fmt=json&limit=15&query=${encodeURIComponent(`release:${q(album)} AND artist:${q(artist)}`)}`
+  try {
+    const res  = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const json = await res.json()
+    const out  = (json.releases || [])
+      .filter(r => r.score >= 80)
+      .map(r => ({ url: `https://coverartarchive.org/release/${r.id}/front-1200`, source: 'Cover Art Archive' }))
+    onResult?.(out)
+    return out
+  } catch (_) {
+    return []
+  }
+}
+
 // Aggregate image candidates for an artist — [{ url, source }].
 export async function searchArtistImages(name, onResult) {
   return wikipediaArtistImages(name, onResult)
