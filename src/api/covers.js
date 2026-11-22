@@ -79,7 +79,14 @@ export async function searchAlbumCovers(artist, album, onResult) {
   const q = s => `"${s.replace(/["\\]/g, '')}"`
   const url = `https://musicbrainz.org/ws/2/release/?fmt=json&limit=15&query=${encodeURIComponent(`release:${q(album)} AND artist:${q(artist)}`)}`
   try {
-    const res  = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    // MusicBrainz answers 503 "server is currently busy" on a fair share of
+    // requests (rate limit, ~1 req/s per IP), so retry a few times.
+    let res
+    for (let i = 0; i < 3; i++) {
+      res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+      if (res.status !== 503) break
+      await new Promise(r => setTimeout(r, 1500))
+    }
     const json = await res.json()
     const out  = (json.releases || [])
       .filter(r => r.score >= 80)
