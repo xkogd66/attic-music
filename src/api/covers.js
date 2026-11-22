@@ -71,11 +71,54 @@ async function wikipediaArtistImages(name, onResult) {
   return out
 }
 
-// Album cover candidates: MusicBrainz release search → Cover Art Archive front
-// image per release. No key; both (and archive.org behind CAA's redirect) send
+// Album cover candidates from three sources searched in parallel; each streams
+// its hits into the picker as it answers. Every image host involved sends
 // Access-Control-Allow-Origin: *, so the picker can fetch and re-upload the bytes.
-// Releases without art 404 — the modal already hides candidates that fail to load.
+// Candidates that fail to load (e.g. a release with no art) are hidden by the modal.
 export async function searchAlbumCovers(artist, album, onResult) {
+  const results = await Promise.all([
+    caaCovers(artist, album, onResult),
+    deezerCovers(artist, album, onResult),
+    wikipediaAlbumCovers(artist, album, onResult),
+  ])
+  return results.flat()
+}
+
+// Deezer album search, through the nginx /deezer-api/ proxy (its API has no CORS).
+async function deezerCovers(artist, album, onResult) {
+  try {
+    const res  = await fetch(`/deezer-api/search/album?q=${encodeURIComponent(`${artist} ${album}`)}&limit=10`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const json = await res.json()
+    const out  = (json.data || []).map(a => a.cover_xl).filter(Boolean).map(url => ({ url, source: 'Deezer' }))
+    onResult?.(out)
+    return out
+  } catch (_) {
+    return []
+  }
+}
+
+// Wikipedia: the image files on the top article hit for "<album>" <artist> album.
+// Not prop=pageimages — it skips non-free files, and album covers are non-free
+// (hosted small, ~300px). Photos/icons on the page are filtered to JPEG/PNG ≥200px.
+async function wikipediaAlbumCovers(artist, album, onResult) {
+  try {
+    const search = await wikipediaGet({ action: 'query', list: 'search', srsearch: `"${album}" ${artist} album`, srnamespace: 0, srlimit: 1 })
+    const title  = search?.query?.search?.[0]?.title
+    if (!title) return []
+    const files = await wikipediaGet({ action: 'query', titles: title, generator: 'images', gimlimit: 20, prop: 'imageinfo', iiprop: 'url|size|mime', iiurlwidth: 1000 })
+    const out = Object.values(files?.query?.pages || {})
+      .map(p => p.imageinfo?.[0])
+      .filter(ii => ii && /^image\/(jpeg|png)$/.test(ii.mime) && ii.width >= 200)
+      .map(ii => ({ url: ii.thumburl || ii.url, source: 'Wikipedia' }))
+    onResult?.(out)
+    return out
+  } catch (_) {
+    return []
+  }
+}
+
+// MusicBrainz release search → Cover Art Archive front image per release.
+async function caaCovers(artist, album, onResult) {
   const q = s => `"${s.replace(/["\\]/g, '')}"`
   const url = `https://musicbrainz.org/ws/2/release/?fmt=json&limit=15&query=${encodeURIComponent(`release:${q(album)} AND artist:${q(artist)}`)}`
   try {

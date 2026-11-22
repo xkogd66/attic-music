@@ -11,6 +11,7 @@ Read-only: it never changes anything. Needs mutagen (pip install mutagen).
 """
 import os
 import re
+import shlex
 import sys
 import unicodedata
 
@@ -114,7 +115,7 @@ def main():
                 want = f"{year}-{folder_name(tags['album'])}"
                 fix = (f"either fix the tags in the app (Edit on the album page), "
                        f"or rename the folder to match the tags:\n"
-                       f"             mv '{full}' '{os.path.join(root, artist_dir, want)}'")
+                       f"             mv {shlex.quote(full)} {shlex.quote(os.path.join(root, artist_dir, want))}")
                 if any("artist" in p for p in problems):
                     fix += "\n             (artist mismatch: fix the album artist tag, or the artist folder name)"
                 n += 1
