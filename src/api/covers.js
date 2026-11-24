@@ -143,7 +143,30 @@ async function caaCovers(artist, album, onResult) {
 
 // Aggregate image candidates for an artist — [{ url, source }].
 export async function searchArtistImages(name, onResult) {
-  return wikipediaArtistImages(name, onResult)
+  const results = await Promise.all([
+    wikipediaArtistImages(name, onResult),
+    deezerArtistImages(name, onResult),
+  ])
+  return results.flat()
+}
+
+// Deezer artist search via the /deezer-api/ proxy. Its search also returns
+// related artists, so only exact (case-insensitive) name matches are kept.
+// Artists with no photo get a placeholder URL with an empty hash (/artist//).
+async function deezerArtistImages(name, onResult) {
+  try {
+    const res  = await fetch(`/deezer-api/search/artist?q=${encodeURIComponent(name)}&limit=10`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    const json = await res.json()
+    const out  = (json.data || [])
+      .filter(a => a.name?.toLowerCase() === name.toLowerCase())
+      .map(a => a.picture_xl)
+      .filter(url => url && !url.includes('/artist//'))
+      .map(url => ({ url, source: 'Deezer' }))
+    onResult?.(out)
+    return out
+  } catch (_) {
+    return []
+  }
 }
 
 // Album covers come from the album folder's cover.jpg via the sidecar, not from
