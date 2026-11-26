@@ -108,12 +108,24 @@ async function discogs(path, params = {}) {
   return res.json();
 }
 
+// The first hit can be a same-titled single (U2's "The Unforgettable Fire");
+// the most-owned hit is the album.
+const mostOwned = ({ results = [] }) =>
+  results.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0))[0];
+
+// The album's first Discogs style (e.g. "Soul-Jazz"), else its first genre, else null.
+// Search results carry style/genre, so this is 1–2 calls and nothing is stored.
+async function fetchDiscogsStyle(artist, album) {
+  if (!DISCOGS_TOKEN) throw new Error("DISCOGS_TOKEN is not set");
+  const q = { artist, release_title: album, per_page: 10 };
+  const hit =
+    mostOwned(await discogs("/database/search", { ...q, type: "master" })) ||
+    mostOwned(await discogs("/database/search", { ...q, type: "release" }));
+  return hit?.style?.[0] || hit?.genre?.[0] || null;
+}
+
 async function fetchDiscogsRating(artist, album) {
   const q = { artist, release_title: album, per_page: 10 };
-  // The first hit can be a same-titled single (U2's "The Unforgettable Fire");
-  // the most-owned hit is the album.
-  const mostOwned = ({ results = [] }) =>
-    results.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0))[0];
   let hit = mostOwned(await discogs("/database/search", { ...q, type: "master" }));
   const isMaster = !!hit;
   // Plenty of releases have no master — rate the single release instead.
@@ -507,6 +519,14 @@ const server = createServer((req, res) => {
       getRating(artist, album, url.searchParams.get("force") === "1").then((r) => json(200, r), upstreamError);
       return;
     }
+  }
+
+  if (url.pathname === "/style" && req.method === "GET") {
+    const artist = url.searchParams.get("artist");
+    const album = url.searchParams.get("album");
+    if (!artist || !album) return json(400, { error: "artist and album are required" });
+    fetchDiscogsStyle(artist, album).then((style) => json(200, { style }), upstreamError);
+    return;
   }
 
   if (req.method !== "POST" || req.url !== "/chat") {

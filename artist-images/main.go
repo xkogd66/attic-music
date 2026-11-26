@@ -1025,15 +1025,20 @@ func mbSearchReleases(artist, album string) ([]map[string]interface{}, error) {
 	return body.Releases, nil
 }
 
+// Genres/tags live on the release group (the album), almost never on a single
+// release, so look up each distinct release group of the search hits.
 func mbGenre(releases []map[string]interface{}) string {
+	seen := map[string]bool{}
 	for _, rel := range releases {
-		rid, _ := rel["id"].(string)
-		if rid == "" {
+		rg, _ := rel["release-group"].(map[string]interface{})
+		gid, _ := rg["id"].(string)
+		if gid == "" || seen[gid] {
 			continue
 		}
+		seen[gid] = true
 		time.Sleep(time.Second) // MusicBrainz rate limit: 1 req/s
 		var d map[string]interface{}
-		if err := getJSON(mbAPI+"/release/"+rid+"?inc=genres+tags&fmt=json", &d); err != nil {
+		if err := getJSON(mbAPI+"/release-group/"+gid+"?inc=genres+tags&fmt=json", &d); err != nil {
 			continue
 		}
 		for _, field := range []string{"genres", "tags"} {

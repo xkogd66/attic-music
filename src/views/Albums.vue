@@ -230,7 +230,7 @@
               <div class="text-xs uppercase tracking-widest text-stone-600 mb-1">
                 {{ ['Album', displayYear].filter(Boolean).join(' · ') }}<span v-if="displayGenre"> · {{ displayGenre }}</span>
               </div>
-              <AlbumRating :album="currentAlbum" full @genre="onFetchedGenre" />
+              <AlbumRating :album="currentAlbum" full :save-genre="saveFetchedGenre" />
               <div class="font-serif text-xl font-semibold leading-tight mb-0.5">{{ displayTitle }}</div>
               <div class="text-sm text-stone-600 mb-3 truncate">
                 <button class="hover:text-amber-700 transition-colors" @click="openArtistByName(displayArtist, $event)">{{ displayArtist }}</button>
@@ -564,11 +564,13 @@ async function saveTagEdits() {
   closeTagEditor()
 }
 
-// Genre written to the files by the MusicBrainz button — same local override as a tag edit.
-function onFetchedGenre(genre) {
+// Discogs style button: write it as the genre (same path as a tag edit), then the local override.
+async function saveFetchedGenre(genre) {
   const id = currentAlbum.value?.id
   if (!id) return
-  try { localStorage.setItem(TAGS_PREFIX + id, JSON.stringify({ ...readAlbumTags(id), genre })) } catch {}
+  const { artist, album } = albumDiskIdentity()
+  await saveAlbumTags(artist, album, albumPath.value, { genre })
+  try { localStorage.setItem(TAGS_PREFIX + id, JSON.stringify({ ...readAlbumTags(id), genre, _diskArtist: artist, _diskAlbum: album })) } catch {}
   tagsVersion.value++
   const listed = albums.value.find(a => a.id === id)
   if (listed) listed.genre = genre

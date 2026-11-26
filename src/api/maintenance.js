@@ -18,7 +18,11 @@ async function start(url, params = {}) {
     if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
   }
   const res = await fetch(`/artist-images${url}?${qs}`, { method: 'POST', cache: 'no-store' })
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`)
+  if (!res.ok) {
+    // The sidecar answers plain text; an HTML body is a proxy/Cloudflare error page.
+    const text = (res.headers.get('content-type') || '').includes('text/html') ? '' : await res.text()
+    throw new Error(text.trim() || `HTTP ${res.status}`)
+  }
   return res.json() // { id }
 }
 

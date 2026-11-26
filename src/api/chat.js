@@ -30,6 +30,14 @@ export async function fetchRatings() {
   } catch { return {} }
 }
 
+// The album's Discogs style (or genre when it has no style); null when Discogs has none.
+export async function fetchStyle(artist, album) {
+  const res = await fetch(`/chat-api/style?${new URLSearchParams({ artist, album })}`, { cache: 'no-store' })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.error || `style request failed (${res.status})`)
+  return body.style
+}
+
 // Fetches from Discogs only if the album isn't stored yet (or force is set).
 export async function fetchRating(artist, album, force = false) {
   const qs = new URLSearchParams({ artist, album, ...(force ? { force: '1' } : {}) })

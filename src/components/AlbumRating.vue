@@ -14,11 +14,11 @@
     <button
       class="border border-stone-300 text-stone-600 px-2.5 py-0.5 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
       :disabled="genreBusy"
-      title="Look up the genre on MusicBrainz and write it to the files"
+      title="Look up the album's style on Discogs and write it to the files as the genre"
       @click="fetchGenre"
-    >{{ genreBusy ? 'Fetching…' : 'Fetch MusicBrainz genre' }}</button>
+    >{{ genreBusy ? 'Fetching…' : 'Fetch Discogs style' }}</button>
     <span v-if="error" class="text-red-600">{{ error }}</span>
-    <span v-if="genreMsg" :class="genreMsg.error ? 'text-red-600' : 'text-stone-500'" :title="genreMsg.full">{{ genreMsg.text }}</span>
+    <span v-if="genreMsg" :class="genreMsg.error ? 'text-red-600' : 'text-stone-500'">{{ genreMsg.text }}</span>
   </div>
   <!-- cards and lists -->
   <span v-else-if="!full && r?.rating" class="text-amber-700" :title="title">{{ (bare ? '★ ' : ' · ★ ') + r.rating.toFixed(1) }}</span>
@@ -27,14 +27,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRatingsStore } from '../stores/ratings'
-import { fetchRating } from '../api/chat'
-import { startEnrich, getJob } from '../api/maintenance'
+import { fetchRating, fetchStyle } from '../api/chat'
 
 // The stored Discogs rating for a subsonic album object. Compact " · ★ 4.3" for
 // cards and lists (`bare` drops the leading dot, for a line of its own); `full`
 // is the detail-header line, which also has the button that fetches it.
-const props = defineProps({ album: { type: Object, default: null }, full: Boolean, bare: Boolean })
-const emit = defineEmits(['genre'])
+// saveGenre(genre): the album view's writer (tags to disk + local override); only used with `full`.
+const props = defineProps({ album: { type: Object, default: null }, full: Boolean, bare: Boolean, saveGenre: Function })
 
 const ratings = useRatingsStore()
 ratings.load()
@@ -62,35 +61,19 @@ async function fetchIt(force) {
   }
 }
 
-// Sidecar /enrich job (genre only, applied): writes TCON to every mp3 when the
-// album has no genre yet. Emits the genre it wrote; otherwise shows the job's note.
+// Discogs style (chat-server /style) → written as the album genre by the view.
 const genreBusy = ref(false)
-const genreMsg = ref(null) // { text, full, error } — short line, full text in the tooltip
-function genreNote(detail) {
-  if (detail.startsWith('already complete')) return { text: 'Already has a genre', full: detail }
-  if (detail.startsWith('no genre'))         return { text: 'No genre found on MusicBrainz', full: detail }
-  if (detail.startsWith('MusicBrainz search failed')) return { text: 'MusicBrainz lookup failed — try again', full: detail, error: true }
-  return { text: detail, full: detail }
-}
+const genreMsg = ref(null) // { text, error }
 async function fetchGenre() {
   const a = props.album
   genreBusy.value = true
   genreMsg.value = null
   try {
-    const { id } = await startEnrich(a.albumArtist || a.artist, a.name, { fields: 'genre', apply: true })
-    let job
-    do {
-      await new Promise(res => setTimeout(res, 1500))
-      job = await getJob(id)
-    } while (job.status !== 'done' && job.status !== 'error')
-    if (job.status === 'error') throw new Error(job.error || 'job failed')
-    const detail = job.changes?.[0]?.detail || ''
-    const genre = detail.match(/^genre = (.+)$/)?.[1]
-    if (genre) emit('genre', genre)
-    else genreMsg.value = genreNote(detail)
+    const style = await fetchStyle(a.albumArtist || a.artist, a.name)
+    if (style) await props.saveGenre(style)
+    else genreMsg.value = { text: 'No style on Discogs' }
   } catch (e) {
-    const full = e.message || String(e)
-    genreMsg.value = { text: 'Genre lookup failed', full, error: true }
+    genreMsg.value = { text: `Style lookup failed — ${e.message || e}`, error: true }
   } finally {
     genreBusy.value = false
   }
