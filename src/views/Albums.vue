@@ -558,6 +558,8 @@ async function saveTagEdits() {
   updated._diskAlbum  = diskAlbum
   try { localStorage.setItem(TAGS_PREFIX + id, JSON.stringify(updated)) } catch {}
   tagsVersion.value++
+  const listed = albums.value.find(a => a.id === id)
+  if (listed && genre) listed.genre = genre
   tagSaving.value = false
   closeTagEditor()
 }
