@@ -47,9 +47,42 @@ spec:
               mountPath: /media/music
       volumes:
         - name: music
-          nfs:
-            server: 192.168.1.8
-            path: /var/lib/media/music/mp3
+          persistentVolumeClaim:
+            claimName: artist-images-music
+---
+# NFS 4.1, not 4.2: on 4.2 Go's file-to-file copy (id3v2 Save) becomes an async
+# server-side COPY that hangs in handle_async_copy. An inline nfs volume can't
+# set mount options, hence the PV/PVC.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: artist-images-music
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+  nfs:
+    server: 192.168.1.8
+    path: /var/lib/media/music/mp3
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: artist-images-music
+  namespace: webapps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: artist-images-music
+  resources:
+    requests:
+      storage: 1Ti
 ---
 apiVersion: v1
 kind: Service

@@ -310,6 +310,11 @@ func embedCover(dir string, img []byte) (int, int) {
 // Keys are raw frame IDs (TALB, TPE1, TPE2, TIT2, TCON, TRCK, TDRC, TYER).
 // Empty values are skipped; existing frames of the same ID are replaced.
 func writeFrames(path string, frames map[string]string) error {
+	// id3v2's Save replaces the file with a new one created 0644; keep the original mode.
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
 	tag, err := id3v2.Open(path, id3v2.Options{Parse: true})
 	if err != nil {
 		return err
@@ -322,7 +327,10 @@ func writeFrames(path string, frames map[string]string) error {
 		tag.DeleteFrames(id)
 		tag.AddTextFrame(id, id3v2.EncodingUTF8, val)
 	}
-	return tag.Save()
+	if err := tag.Save(); err != nil {
+		return err
+	}
+	return os.Chmod(path, info.Mode().Perm())
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1440,24 +1448,24 @@ func main() {
 			http.Error(w, "cannot read album directory", http.StatusInternalServerError)
 			return
 		}
-		count := 0
-		for _, e := range entries {
-			if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".mp3") {
-				continue
+		// Each save rewrites the whole mp3 over NFS (~3.5s/track), so write in the
+		// background and answer now; failures only reach the log.
+		go func() {
+			count := 0
+			for _, e := range entries {
+				if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".mp3") {
+					continue
+				}
+				file := filepath.Join(dir, e.Name())
+				if err := writeFrames(file, frames); err != nil {
+					log.Printf("album-tags: failed to write %s: %v", file, err)
+					continue
+				}
+				count++
 			}
-			file := filepath.Join(dir, e.Name())
-			if err := writeFrames(file, frames); err != nil {
-				log.Printf("album-tags: failed to write %s: %v", file, err)
-				continue
-			}
-			count++
-		}
-		if count == 0 {
-			http.Error(w, "no tracks written", http.StatusInternalServerError)
-			return
-		}
-		log.Printf("wrote album tags for %q / %q → %d tracks", artist, album, count)
-		w.WriteHeader(http.StatusOK)
+			log.Printf("wrote album tags for %q / %q → %d tracks", artist, album, count)
+		}()
+		w.WriteHeader(http.StatusAccepted)
 	})
 
 	// /track-tags writes track-level ID3 frames (title, artist, track number) to a
