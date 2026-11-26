@@ -61,7 +61,9 @@ export function findLibraryAlbum({ artist, album }) {
   if (!resolved.has(key)) {
     resolved.set(key, (async () => {
       try {
-        const { albums } = await search(album)
+        // search3 matches loosely: a short name ("cola") has many partial hits, so
+        // the default 8 can miss the exact one.
+        const { albums } = await search(album, 200)
         const named = albums.filter(a => norm(a.name) === norm(album))
         return named.find(a => norm(a.artist) === norm(artist)) || named[0] || null
       } catch (e) {

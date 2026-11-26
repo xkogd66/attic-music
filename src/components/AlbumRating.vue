@@ -18,7 +18,7 @@
       @click="fetchGenre"
     >{{ genreBusy ? 'Fetching…' : 'Fetch MusicBrainz genre' }}</button>
     <span v-if="error" class="text-red-600">{{ error }}</span>
-    <span v-if="genreMsg" class="text-stone-500">{{ genreMsg }}</span>
+    <span v-if="genreMsg" :class="genreMsg.error ? 'text-red-600' : 'text-stone-500'" :title="genreMsg.full">{{ genreMsg.text }}</span>
   </div>
   <!-- cards and lists -->
   <span v-else-if="!full && r?.rating" class="text-amber-700" :title="title">{{ (bare ? '★ ' : ' · ★ ') + r.rating.toFixed(1) }}</span>
@@ -65,11 +65,17 @@ async function fetchIt(force) {
 // Sidecar /enrich job (genre only, applied): writes TCON to every mp3 when the
 // album has no genre yet. Emits the genre it wrote; otherwise shows the job's note.
 const genreBusy = ref(false)
-const genreMsg = ref('')
+const genreMsg = ref(null) // { text, full, error } — short line, full text in the tooltip
+function genreNote(detail) {
+  if (detail.startsWith('already complete')) return { text: 'Already has a genre', full: detail }
+  if (detail.startsWith('no genre'))         return { text: 'No genre found on MusicBrainz', full: detail }
+  if (detail.startsWith('MusicBrainz search failed')) return { text: 'MusicBrainz lookup failed — try again', full: detail, error: true }
+  return { text: detail, full: detail }
+}
 async function fetchGenre() {
   const a = props.album
   genreBusy.value = true
-  genreMsg.value = ''
+  genreMsg.value = null
   try {
     const { id } = await startEnrich(a.albumArtist || a.artist, a.name, { fields: 'genre', apply: true })
     let job
@@ -81,9 +87,10 @@ async function fetchGenre() {
     const detail = job.changes?.[0]?.detail || ''
     const genre = detail.match(/^genre = (.+)$/)?.[1]
     if (genre) emit('genre', genre)
-    else genreMsg.value = detail
+    else genreMsg.value = genreNote(detail)
   } catch (e) {
-    genreMsg.value = e.message || String(e)
+    const full = e.message || String(e)
+    genreMsg.value = { text: 'Genre lookup failed', full, error: true }
   } finally {
     genreBusy.value = false
   }

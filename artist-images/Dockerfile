@@ -6,7 +6,7 @@ COPY main.go .
 RUN go build -o artist-images .
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/artist-images /artist-images
 EXPOSE 8080
 CMD ["/artist-images"]

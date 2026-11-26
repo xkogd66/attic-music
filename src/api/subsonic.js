@@ -364,8 +364,8 @@ export async function getScanStatus() {
   return request('getScanStatus')
 }
 
-export async function search(query) {
-  const data = await request('search3', { query, artistCount: 5, albumCount: 8, songCount: 8 })
+export async function search(query, albumCount = 8) {
+  const data = await request('search3', { query, artistCount: 5, albumCount, songCount: 8 })
   return {
     artists: ensureArray(data.searchResult3?.artist),
     albums:  ensureArray(data.searchResult3?.album),
