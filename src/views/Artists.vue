@@ -314,7 +314,7 @@
               </div>
               <div class="font-serif text-3xl font-semibold mb-1.5">{{ displayTitle }}</div>
               <div class="text-sm text-stone-600 mb-1">{{ displayArtist }}</div>
-              <AlbumRating :album="currentAlbum" full />
+              <AlbumRating :album="currentAlbum" full @genre="onFetchedGenre" />
               <div class="mb-3"></div>
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
@@ -795,6 +795,14 @@ async function saveTagEdits() {
   tagsVersion.value++
   tagSaving.value = false
   closeTagEditor()
+}
+
+// Genre written to the files by the MusicBrainz button — same local override as a tag edit.
+function onFetchedGenre(genre) {
+  const id = currentAlbum.value?.id
+  if (!id) return
+  try { localStorage.setItem(TAGS_PREFIX + id, JSON.stringify({ ...readAlbumTags(id), genre })) } catch {}
+  tagsVersion.value++
 }
 
 function openTrackEditor(track) {
