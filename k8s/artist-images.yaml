@@ -37,6 +37,12 @@ spec:
           env:
             - name: MUSIC_ROOT
               value: /media/music
+            # gonic, for the admin check on write endpoints (same value chat-server uses)
+            - name: GONIC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: chat-server-secret
+                  key: GONIC_URL
             - name: LOG_REQUESTS
               valueFrom:
                 configMapKeyRef:

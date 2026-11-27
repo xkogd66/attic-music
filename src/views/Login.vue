@@ -24,12 +24,10 @@
         Remember on this Mac
       </label>
 
-      <div v-if="config.turnstileSiteKey" ref="turnstileEl" class="mt-4"></div>
-
       <button
         class="mt-6 w-full bg-stone-900 text-white text-sm font-medium tracking-wide py-3 hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="login"
-        :disabled="logging || (config.turnstileSiteKey && !turnstileToken)"
+        :disabled="logging"
       >
         {{ logging ? 'Connecting…' : 'Connect' }}
       </button>
@@ -40,19 +38,16 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '../stores/config'
-import { ping } from '../api/subsonic'
+import { getUser } from '../api/subsonic'
 
 const config  = useConfigStore()
 const router  = useRouter()
 
 const logging        = ref(false)
 const error          = ref('')
-const turnstileEl    = ref(null)
-const turnstileToken = ref('')
-const widgetId       = ref(null)
 
 // Electron only (window.attic, see electron/): offer to remember the login.
 const canRemember = !!window.attic?.saveCredentials
@@ -64,56 +59,27 @@ const form = reactive({
   password: '',
 })
 
-onMounted(async () => {
+onMounted(() => {
   form.server   = config.server
   form.username = config.username
   form.password = config.password
-
-  if (!config.turnstileSiteKey) return
-
-  if (!window.turnstile) {
-    await new Promise((resolve) => {
-      const script = document.createElement('script')
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
-      script.onload = resolve
-      document.head.appendChild(script)
-    })
-  }
-
-  widgetId.value = window.turnstile.render(turnstileEl.value, {
-    sitekey: config.turnstileSiteKey,
-    callback:           (token) => { turnstileToken.value = token },
-    'expired-callback': ()      => { turnstileToken.value = '' },
-    'error-callback':   ()      => { turnstileToken.value = '' },
-  })
-})
-
-onUnmounted(() => {
-  if (widgetId.value !== null && window.turnstile) {
-    window.turnstile.remove(widgetId.value)
-  }
 })
 
 async function login() {
-  if (config.turnstileSiteKey && !turnstileToken.value) return
   error.value   = ''
   logging.value = true
   try {
     config.server   = form.server.replace(/\/$/, '')
     config.username = form.username
     config.password = form.password
-    await ping()
-    config.saveSession()
+    const user = await getUser()
+    config.saveSession(user.adminRole)
     if (canRemember && remember.value) {
       await window.attic.saveCredentials({ server: config.server, username: config.username, password: config.password })
     }
     router.push('/')
   } catch(e) {
     error.value = 'Could not connect — check URL and credentials.'
-    if (widgetId.value !== null && window.turnstile) {
-      window.turnstile.reset(widgetId.value)
-      turnstileToken.value = ''
-    }
   } finally {
     logging.value = false
   }

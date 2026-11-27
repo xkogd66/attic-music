@@ -188,7 +188,7 @@
         <div class="flex items-center gap-2">
           <h1 class="font-serif text-3xl font-semibold">{{ displayTitle }}</h1>
           <div class="flex items-center gap-2">
-            <button class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors" title="Edit album tags" @click="openTagEditor">
+            <button v-if="config.isAdmin" class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors" title="Edit album tags" @click="openTagEditor">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z" /></svg>
               Edit
             </button>
@@ -217,6 +217,7 @@
                 @error="onAlbumDetailCoverError"
               />
               <button
+                v-if="config.isAdmin"
                 class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer gap-1"
                 :class="albumDetailCoverState === 'failed' ? '' : 'bg-black/40 opacity-0 group-hover/cover:opacity-100 transition-opacity'"
                 title="Change album cover"
@@ -239,7 +240,7 @@
             <button class="bg-stone-900 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
             <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
             <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download selected tracks, or the whole album, as a zip" @click="downloadAlbumOrSelected"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" /></svg>{{ selectedIds.length ? `Download (${selectedIds.length})` : 'Download' }}</button>
-            <AlbumRating :album="currentAlbum" fix :save-genre="saveFetchedGenre" />
+            <AlbumRating v-if="config.isAdmin" :album="currentAlbum" fix :save-genre="saveFetchedGenre" />
           </div>
 
           <div v-if="showLocation && albumPath" class="mb-6 px-4 py-3 bg-stone-100 rounded-lg border border-stone-200 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -258,7 +259,7 @@
             v-for="(track, i) in albumTracks" :key="track.id"
             :track="track"
             :index="i"
-            editable
+            :editable="config.isAdmin"
             @play="player.playTrack(track, albumTracks, i)"
             @queue="player.addToQueue(track)"
             @edit="openTrackEditor"
@@ -399,10 +400,12 @@ import { GENRES } from '../api/genres'
 import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem from '../components/TrackItem.vue'
 import AlbumRating from '../components/AlbumRating.vue'
+import { useConfigStore } from '../stores/config'
 
 const route  = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
+const config = useConfigStore()
 
 
 const loading        = ref(false)

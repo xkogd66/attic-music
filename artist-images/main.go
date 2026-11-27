@@ -1224,7 +1224,73 @@ func enrichLyrics(dir string, apply bool, j *job) ([]change, error) {
 	return changes, nil
 }
 
+// ── Admin check ─────────────────────────────────────────────────
+// Reads (covers, avatars, job status) are open; every other request must carry
+// the credentials of a gonic admin (X-Auth-User / X-Auth-Pass, the same u/p the
+// app sends gonic), checked with gonic getUser. Valid answers are cached 5 min.
+var gonicURL string
+
+type authEntry struct {
+	admin bool
+	at    time.Time
+}
+
+var (
+	authMu    sync.Mutex
+	authCache = map[string]authEntry{}
+)
+
+func isGonicAdmin(user, pass string) bool {
+	if user == "" || pass == "" {
+		return false
+	}
+	key := user + "\x00" + pass
+	authMu.Lock()
+	e, ok := authCache[key]
+	authMu.Unlock()
+	if ok && time.Since(e.at) < 5*time.Minute {
+		return e.admin
+	}
+	q := url.Values{"u": {user}, "p": {pass}, "v": {"1.16.1"}, "c": {"artist-images"}, "f": {"json"}}
+	resp, err := httpClient.Get(gonicURL + "/rest/getUser.view?" + q.Encode())
+	if err != nil {
+		log.Printf("auth: gonic getUser: %v", err)
+		return false
+	}
+	defer resp.Body.Close()
+	var body struct {
+		R struct {
+			Status string `json:"status"`
+			User   struct {
+				AdminRole bool `json:"adminRole"`
+			} `json:"user"`
+		} `json:"subsonic-response"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil || body.R.Status != "ok" {
+		return false // bad credentials are not cached
+	}
+	authMu.Lock()
+	authCache[key] = authEntry{body.R.User.AdminRole, time.Now()}
+	authMu.Unlock()
+	return body.R.User.AdminRole
+}
+
+func adminWrites(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead &&
+			!isGonicAdmin(r.Header.Get("X-Auth-User"), r.Header.Get("X-Auth-Pass")) {
+			http.Error(w, "admin only", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
+	gonicURL = strings.TrimRight(os.Getenv("GONIC_URL"), "/")
+	if gonicURL == "" {
+		log.Fatal("GONIC_URL must be set (admin check for write endpoints)")
+	}
 	root := os.Getenv("MUSIC_ROOT")
 	if root == "" {
 		root = "/media/music"
@@ -1816,5 +1882,5 @@ func main() {
 	})
 
 	log.Printf("listening on :8080 (LOG_REQUESTS=%v)", logRequests)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", adminWrites(http.DefaultServeMux)))
 }

@@ -3,6 +3,8 @@
 // the mp3 files on the NFS share by the sidecar; callers should follow a
 // successful save with subsonic.startScan() to have Gonic re-index the changes.
 
+import { authHeaders } from './subsonic'
+
 // Writes album-level frames to every track in the album:
 //   title       → TALB
 //   artist      → TPE1 (bulk, applied to all tracks)
@@ -21,7 +23,7 @@ export async function saveAlbumTags(dirArtist, dirAlbum, dir, { title, artist, a
   if (genre)       form.append('genre', genre)
   const res = await fetch(
     `/artist-images/album-tags?artist=${encodeURIComponent(dirArtist)}&album=${encodeURIComponent(dirAlbum)}&dir=${encodeURIComponent(dir)}`,
-    { method: 'POST', body: form }
+    { method: 'POST', body: form, headers: authHeaders() }
   )
   if (!res.ok) throw new Error(`album-tags failed: ${res.status}`)
 }
@@ -36,7 +38,7 @@ export async function saveTrackTags(artist, album, dir, file, { title, artist: t
   if (track)       form.append('track', String(track))
   const res = await fetch(
     `/artist-images/track-tags?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&dir=${encodeURIComponent(dir)}`,
-    { method: 'POST', body: form }
+    { method: 'POST', body: form, headers: authHeaders() }
   )
   if (!res.ok) throw new Error(`track-tags failed: ${res.status}`)
 }

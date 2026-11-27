@@ -62,8 +62,11 @@ async function adminScan() {
 // shared store the app reads), reached through the public nginx proxy.
 const CHAT_API_URL = (process.env.CHAT_API_URL || "https://music.ekskog.me/chat-api").replace(/\/$/, "");
 
-async function chatApi(path, init) {
-  const res = await fetch(`${CHAT_API_URL}${path}`, init);
+// POST /ratings is admin-only: chat-server checks these gonic credentials with getUser.
+const AUTH_HEADERS = { "X-Auth-User": USERNAME, "X-Auth-Pass": `enc:${Buffer.from(PASSWORD).toString("hex")}` };
+
+async function chatApi(path, init = {}) {
+  const res = await fetch(`${CHAT_API_URL}${path}`, { ...init, headers: { ...init.headers, ...AUTH_HEADERS } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || `chat-server ${path}: HTTP ${res.status}`);
   return body;

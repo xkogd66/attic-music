@@ -37,7 +37,7 @@ import { useFiltersStore } from './stores/filters'
 import SideBar from './components/SideBar.vue'
 import Player  from './components/Player.vue'
 import { useUiStore } from './stores/ui'
-import { ping } from './api/subsonic'
+import { getUser } from './api/subsonic'
 
 const config = useConfigStore()
 const ui     = useUiStore()
@@ -75,8 +75,8 @@ async function autoLogin() {
   config.username = creds.username
   config.password = creds.password
   try {
-    await ping()
-    config.saveSession()
+    const user = await getUser()
+    config.saveSession(user.adminRole)
     await router.isReady() // the first navigation may already have bounced to /login
     if (router.currentRoute.value.name === 'login') router.replace('/home')
   } catch (_) {}

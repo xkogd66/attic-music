@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { authHeaders } from '../api/subsonic'
 
 // Shared "pick a cover" modal: search online candidates, then upload a
 // chosen one or a device file to the sidecar. Building the sidecar URL and
@@ -43,7 +44,7 @@ export function useCoverSearch() {
     try {
       const form = new FormData()
       form.append('cover', body, filename)
-      const res = await fetch(url, { method: 'POST', body: form })
+      const res = await fetch(url, { method: 'POST', body: form, headers: authHeaders() })
       if (res.ok) {
         onSuccess()
         open.value = false

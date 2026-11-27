@@ -185,7 +185,7 @@
           <span>{{ currentArtist.name }}</span>
         </div>
         <div class="flex items-center gap-4">
-          <button type="button" class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0 bg-stone-100 relative cursor-pointer group/avatar" title="Change artist photo" @click="openAvatarSearch">
+          <button type="button" class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex-shrink-0 bg-stone-100 relative group/avatar" :class="config.isAdmin && 'cursor-pointer'" :disabled="!config.isAdmin" :title="config.isAdmin ? 'Change artist photo' : ''" @click="openAvatarSearch">
             <img
               v-if="artistDetailImageUrl"
               :src="artistDetailImageUrl"
@@ -196,7 +196,7 @@
             <div v-else class="w-full h-full flex items-center justify-center font-serif text-2xl font-semibold text-stone-500 select-none">
               {{ currentArtist.name?.[0]?.toUpperCase() }}
             </div>
-            <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+            <div v-if="config.isAdmin" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
               <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </div>
           </button>
@@ -269,7 +269,7 @@
         <div class="flex items-center gap-2">
           <h1 class="font-serif text-2xl md:text-4xl font-semibold truncate">{{ displayTitle }}</h1>
           <div class="flex items-center gap-2">
-            <button class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors" title="Edit album tags" @click="openTagEditor">
+            <button v-if="config.isAdmin" class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors" title="Edit album tags" @click="openTagEditor">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z" /></svg>
               Edit
             </button>
@@ -298,6 +298,7 @@
                 @error="onAlbumDetailCoverError"
               />
               <button
+                v-if="config.isAdmin"
                 class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer gap-1"
                 :class="albumDetailCoverState === 'failed' ? '' : 'bg-black/40 opacity-0 group-hover/cover:opacity-100 transition-opacity'"
                 title="Change album cover"
@@ -339,7 +340,7 @@
             v-for="(track, i) in albumTracks" :key="track.id"
             :track="track"
             :index="i"
-            editable
+            :editable="config.isAdmin"
             @play="player.playTrack(track, albumTracks, i)"
             @queue="player.addToQueue(track)"
             @edit="openTrackEditor"
@@ -484,10 +485,12 @@ import { useCoverSearch } from '../composables/useCoverSearch'
 import TrackItem  from '../components/TrackItem.vue'
 import ArtistCard from '../components/ArtistCard.vue'
 import AlbumRating from '../components/AlbumRating.vue'
+import { useConfigStore } from '../stores/config'
 
 const route  = useRoute()
 const router = useRouter()
 const player = usePlayerStore()
+const config = useConfigStore()
 
 const LETTERS = ['#', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
 

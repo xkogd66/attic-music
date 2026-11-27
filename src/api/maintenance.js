@@ -12,12 +12,14 @@
 // run in parallel. Job state shape:
 //   { id, op, applied, status, message, progress, total, error, changes, data }
 
+import { authHeaders } from './subsonic'
+
 async function start(url, params = {}) {
   const qs = new URLSearchParams()
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
   }
-  const res = await fetch(`/artist-images${url}?${qs}`, { method: 'POST', cache: 'no-store' })
+  const res = await fetch(`/artist-images${url}?${qs}`, { method: 'POST', cache: 'no-store', headers: authHeaders() })
   if (!res.ok) {
     // The sidecar answers plain text; an HTML body is a proxy/Cloudflare error page.
     const text = (res.headers.get('content-type') || '').includes('text/html') ? '' : await res.text()

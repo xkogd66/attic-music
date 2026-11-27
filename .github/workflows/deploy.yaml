@@ -20,14 +20,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate config
-        env:
-          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
           cat > public/config.json <<EOF
           {
             "server": "https://gonic.ekskog.net",
-            "username": "lucarv",
-            "turnstileSiteKey": "$TURNSTILE_SITE_KEY"
+            "username": "lucarv"
           }
           EOF
 

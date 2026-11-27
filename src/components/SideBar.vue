@@ -165,6 +165,7 @@
         </button>
 
         <button
+          v-if="config.isAdmin"
           type="button"
           class="text-stone-600 hover:text-amber-700 transition-colors disabled:opacity-40"
           :title="scanning ? 'Scanning…' : 'Rescan library'"
@@ -223,7 +224,7 @@ const navItems = [
   { to: '/albums',    icon: Disc3,     label: 'Albums'    },
   { to: '/playlists', icon: ListMusic, label: 'Playlists' },
   { to: '/stats',     icon: BarChart3, label: 'Stats'     },
-  { to: '/tools',     icon: Wrench,    label: 'Tools'     },
+  ...(config.isAdmin ? [{ to: '/tools', icon: Wrench, label: 'Tools' }] : []),
 ]
 
 function isActive(path) {

@@ -1,3 +1,5 @@
+import { authHeaders } from './subsonic'
+
 export async function fetchProviders() {
   const res = await fetch('/chat-api/providers')
   if (!res.ok) return []
@@ -7,7 +9,7 @@ export async function fetchProviders() {
 export async function askAI(message, provider) {
   const res = await fetch('/chat-api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ message, provider }),
   })
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `chat request failed (${res.status})`)
@@ -41,7 +43,7 @@ export async function fetchStyle(artist, album) {
 // Fetches from Discogs only if the album isn't stored yet (or force is set).
 export async function fetchRating(artist, album, force = false) {
   const qs = new URLSearchParams({ artist, album, ...(force ? { force: '1' } : {}) })
-  const res = await fetch(`/chat-api/ratings?${qs}`, { method: 'POST' })
+  const res = await fetch(`/chat-api/ratings?${qs}`, { method: 'POST', headers: authHeaders() })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(body.error || `rating request failed (${res.status})`)
   return body

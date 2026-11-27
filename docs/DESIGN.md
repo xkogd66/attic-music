@@ -52,7 +52,8 @@ Use this to find code without searching.
 
 | Feature | Files |
 |---|---|
-| Login, Turnstile, Electron remembered login | `views/Login.vue`, `stores/config.js`, `App.vue` (`autoLogin`), `electron/main.js`, `electron/preload.js` |
+| Login, admin vs. user, Electron remembered login | `views/Login.vue`, `stores/config.js`, `App.vue` (`autoLogin`), `electron/main.js`, `electron/preload.js` |
+| Users (who may log in, who is admin) | gonic's own admin page — no app code. Enforcement: sidecar `adminWrites`, chat-server `whoami` |
 | Route guard | `router/index.js` |
 | Layout (desktop sidebar / mobile nav / player modes) | `App.vue`, `components/SideBar.vue`, `components/BottomNav.vue`, `components/Player.vue` |
 | Subsonic client (every gonic call) | `api/subsonic.js` |
@@ -87,10 +88,11 @@ Use this to find code without searching.
 ### 3.1 Boot and auth
 1. `main.js` mounts `App.vue` with Pinia + router. (Line 1 is a stale "force rebuild" comment.)
 2. `App.vue` `onMounted`: `config.load()` → `autoLogin()` → `ready = true`. Nothing renders before `ready`.
-3. `config.load()` fetches `/config.json` (written by CI: `server`, `username`, `turnstileSiteKey`) and deletes the legacy `localStorage.attic_cfg`.
-4. **Credentials are memory-only** (`config` store: `server`, `username`, `password`, `loggedIn`). Every reload/new tab re-logs in.
-5. `Login.vue`: optional Cloudflare Turnstile widget (script loaded on demand when `turnstileSiteKey` is set; the token is client-side only, never sent anywhere). `login()` sets config, runs `ping()`, then `saveSession()` (`loggedIn = true`) and pushes `/`. Failure → message + Turnstile reset.
-6. `router.beforeEach`: anything but `login` redirects to `login` while `!loggedIn`.
+3. `config.load()` fetches `/config.json` (written by CI: `server`, `username`) and deletes the legacy `localStorage.attic_cfg`.
+4. **Credentials are memory-only** (`config` store: `server`, `username`, `password`, `isAdmin`, `loggedIn`). Every reload/new tab re-logs in.
+5. `Login.vue`: `login()` sets config, runs gonic `getUser()` (proves the credentials and returns `adminRole`), then `saveSession(adminRole)` (`isAdmin`, `loggedIn = true`) and pushes `/`. Failure → message.
+6. `router.beforeEach`: anything but `login` redirects to `login` while `!loggedIn`; `/tools` redirects to `/home` unless `isAdmin`.
+6a. **Users and admin**: accounts live in gonic (created/deleted and admin-flagged on gonic's admin page). Non-admins get no Tools nav/route, no rescan button, no tag Edit / track edit, no cover or avatar change, no "fix metadata". That is only UI; enforcement is server-side: calls that need a user send `authHeaders()` (`X-Auth-User`, `X-Auth-Pass: enc:<hex>`, from `api/subsonic.js`), and the sidecar (every non-GET) and chat-server (`POST /ratings`) refuse non-admins after checking those with gonic `getUser` (valid answers cached 5 min).
 7. `App.vue` renders the library layout only when `loggedIn`; logged out, the `<RouterView>` (Login) is the whole tree.
 8. **Electron**: `window.attic` exists → Login shows "Remember on this Mac" (default on) and saves via `attic.saveCredentials`; `autoLogin()` reads `attic.getCredentials()`, pings, logs in, replaces `/login` with `/home`. `config.logout()` calls `attic.clearCredentials()`.
 
@@ -106,7 +108,7 @@ Use this to find code without searching.
 ### 3.3 Stores (Pinia, all setup-style)
 | Store | State | Persistence |
 |---|---|---|
-| `config` | server, username, password, turnstileSiteKey, loggedIn | none (memory) |
+| `config` | server, username, password, isAdmin, loggedIn | none (memory) |
 | `player` | queue, currentIndex, currentTrack, isPlaying, shuffle, repeat, currentTime, duration, volume | `attic_volume` only |
 | `playlist` | playlists (for TrackItem's + menu) | none; `load()` refetches every time the menu opens |
 | `filters` | genre, year, scope, opts `{scope, genres, years}`, yearsExpanded | none |
@@ -273,7 +275,8 @@ Track edits: `saveTrackTags(diskArtist, diskAlbum, albumPath, <file basename>, {
 ## 10. Scrobbles, recent plays, stats
 
 **Last.fm is gone.** The app is its own scrobbler; gonic's `scrobble` is no longer called.
-- `stores/player.js` → `api/scrobbles.js scrobble(track)` → `POST /chat-api/scrobbles {artist, album, track}` → chat-server lowercases them and inserts `{ts (server time), artist, album, track}` into ClickHouse `music.scrobbles` (HTTP interface, `JSONEachRow`).
+- `stores/player.js` → `api/scrobbles.js scrobble(track)` → `POST /chat-api/scrobbles {artist, album, track}` → chat-server lowercases them and inserts `{ts (server time), artist, album, track, username}` into ClickHouse `music.scrobbles` (HTTP interface, `JSONEachRow`).
+- **Per user**: every `/scrobbles*` call and `/chat` needs `authHeaders()` (401 otherwise); `username` comes from gonic `getUser`, and recent plays, Stats and the `scrobble_stats` LLM tool only ever read that user's rows.
 - `RecentPlays.vue` (sidebar, collapsible, open by default): `getRecentScrobbles(5)` every 30 s (`GET /chat-api/scrobbles?limit=5`, newest first) showing track / artist / album / "Xm ago". Only the album is a button: `findLibraryAlbum({artist, album})` (search3 on the album name; exact name + artist match, else exact name only; memoized per session, failures not cached) → `album-detail`, or "not in library" (carried across polls). The `nowplaying` styling never triggers — the API does not return that field.
 - `Stats.vue` (`/stats`, desktop nav only): plays-per-year bar chart (click a bar to filter by that year), plays-per-month (12 bars, selected year or all time), top artists/albums/tracks (50) for the selected year. All via `GET /chat-api/scrobbles/stats?by=artist|album|track|year|month[&year][&artist][&limit]` (limit 1–200, fixed SQL shapes, values bound as ClickHouse query params).
 
@@ -281,7 +284,7 @@ Track edits: `saveTrackTags(diskArtist, diskAlbum, albumPath, <file basename>, {
 
 ## 11. Discogs ratings
 
-- chat-server owns them: `GET /ratings` → the whole map; `POST /ratings?artist=&album=[&force=1]` → stored value or fetch-and-store. Stored in `/data/ratings.json` (PVC `chat-server-data`, written via tmp + rename; a corrupt file stops the server from starting). A "no votes" result is stored too.
+- chat-server owns them: `GET /ratings` → the whole map; `POST /ratings?artist=&album=[&force=1]` (**admin only**, 403 otherwise; the MCP server sends its gonic creds) → stored value or fetch-and-store. Stored in `/data/ratings.json` (PVC `chat-server-data`, written via tmp + rename; a corrupt file stops the server from starting). A "no votes" result is stored too.
 - Algorithm: Discogs search by master (most-owned hit; avoids same-titled singles) → top 5 most-collected versions → each release's rating → vote-weighted mean (2 dp). No master → single most-owned release. ~7 calls per album, Discogs limit 60/min.
 - Key: `ratingKey(artist, album)` — NFKD, strip marks, lowercase, drop non-alphanumerics, `artist|album`. **Defined twice — `chat-server/index.js` and `src/api/chat.js` — keep identical.**
 - Frontend: `ratings` store loads the map once; `AlbumRating.vue` shows ` · ★ 4.3` on cards (`bare` drops the dot) and, with `full`, the detail rating line. Keyed by `albumArtist || artist` + `name`.
@@ -338,7 +341,7 @@ Track edits: `saveTrackTags(diskArtist, diskAlbum, albumPath, <file basename>, {
 
 Tag rules: golden set `TIT2 TALB TPE1 TPE2 TRCK TDRC TPOS TCOM TPE3 APIC TCMP`; grouping tags aligned to the first file `TALB TPE2 TDRC TPOS TCMP`; audit-critical `TALB TPE2 TDRC`. `writeFrames` preserves file mode (id3v2 recreates files 0644). **mp3 only** — FLAC etc. are never tag-edited by the sidecar.
 
-All endpoints are **unauthenticated** and reachable publicly through nginx at `https://music.ekskog.me/artist-images/…`.
+Reachable publicly through nginx at `https://music.ekskog.me/artist-images/…`. GET/HEAD (covers, avatars, `/job`, `/jobs`) are open; **every other request needs a gonic admin** (`adminWrites` wraps the mux: `X-Auth-User`/`X-Auth-Pass` checked with gonic `getUser` at `GONIC_URL`, taken from `chat-server-secret`; 403 otherwise). The sidecar refuses to start without `GONIC_URL`.
 
 ### 13.2 chat-server (`chat-server/index.js`)
 | Route | Purpose |
@@ -372,7 +375,7 @@ Loads `ATTIC_URL` (default the live site), single instance, external links → d
 ## 14. Deployment
 
 - **CI** (`.github/workflows/deploy.yaml`, on push to `main`):
-  1. `build-attic-music` — writes `public/config.json` (`server`, `username`, `turnstileSiteKey` from secret), builds/pushes `:latest` + `:<sha>`, then `kubectl set image deployment/attic-music attic=…:<sha>` + rollout status (immutable tag, not a restart).
+  1. `build-attic-music` — writes `public/config.json` (`server`, `username`), builds/pushes `:latest` + `:<sha>`, then `kubectl set image deployment/attic-music attic=…:<sha>` + rollout status (immutable tag, not a restart).
   2. `build-artist-images` — only if `git diff HEAD~1 HEAD` touches `artist-images/`: build, push, `kubectl apply -f k8s/artist-images.yaml`, rollout restart.
   3. `build-chat-server` — same, path filter `chat-server/`. Editing only `k8s/chat-server.yaml` skips the job → apply by hand.
 - **Images**: frontend = node:22 build → `nginx:alpine` with `nginx.conf` (`index.html` and `manifest.webmanifest` no-cache; SPA fallback; gzip). Sidecar = golang:1.22 build → `debian:bookworm-slim` **with ffmpeg**. chat-server = node:22-slim `npm ci --omit=dev`.

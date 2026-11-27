@@ -1,4 +1,4 @@
-import { search } from './subsonic'
+import { search, authHeaders } from './subsonic'
 
 // The app's own scrobbler — chat-server stores plays in ClickHouse
 // (music.scrobbles). Replaces Last.fm.
@@ -15,14 +15,14 @@ function timeAgo(uts) {
 export async function scrobble(track) {
   const res = await fetch('/chat-api/scrobbles', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ artist: track.artist, album: track.album || '', track: track.title }),
   })
   if (!res.ok) throw new Error(`scrobble failed (${res.status})`)
 }
 
 export async function getRecentScrobbles(limit = 5) {
-  const res = await fetch(`/chat-api/scrobbles?limit=${limit}`, { cache: 'no-store' })
+  const res = await fetch(`/chat-api/scrobbles?limit=${limit}`, { cache: 'no-store', headers: authHeaders() })
   if (!res.ok) throw new Error(`recent scrobbles failed (${res.status})`)
   return (await res.json()).map(s => ({
     track:  s.track,
@@ -39,7 +39,7 @@ export async function getScrobbleStats({ by = 'artist', year, artist, limit } = 
   if (year)   qs.set('year', year)
   if (artist) qs.set('artist', artist)
   if (limit)  qs.set('limit', limit)
-  const res = await fetch(`/chat-api/scrobbles/stats?${qs}`, { cache: 'no-store' })
+  const res = await fetch(`/chat-api/scrobbles/stats?${qs}`, { cache: 'no-store', headers: authHeaders() })
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `stats failed (${res.status})`)
   return res.json()
 }

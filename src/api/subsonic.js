@@ -158,6 +158,17 @@ export async function ping() {
   return request('ping')
 }
 
+// The logged-in user ({ username, adminRole, ... }); also proves the credentials.
+export async function getUser() {
+  return (await request('getUser')).user
+}
+
+// Sent on sidecar / chat-server calls that need a user; they check them with gonic getUser.
+export function authHeaders() {
+  const config = useConfigStore()
+  return { 'X-Auth-User': config.username, 'X-Auth-Pass': `enc:${hexEncode(config.password)}` }
+}
+
 export async function getIndexes() {
   const data    = await request('getIndexes')
   const indexes = ensureArray(data.indexes?.index)

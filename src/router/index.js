@@ -35,6 +35,7 @@ router.beforeEach(async (to) => {
   if (!config.loggedIn && to.name !== 'login') {
     return { name: 'login' }
   }
+  if (to.name === 'tools' && !config.isAdmin) return { name: 'home' }
 })
 
 export default router

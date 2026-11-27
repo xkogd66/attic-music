@@ -72,6 +72,25 @@ async function subsonic(endpoint, params = {}) {
   return r;
 }
 
+// The caller's gonic identity from X-Auth-User / X-Auth-Pass (the u/p the app
+// sends gonic), checked with getUser. Valid answers are cached 5 min; null
+// means no or bad credentials.
+const authCache = new Map();
+async function whoami(req) {
+  const u = req.headers["x-auth-user"];
+  const p = req.headers["x-auth-pass"];
+  if (!u || !p) return null;
+  const key = `${u}\0${p}`;
+  const hit = authCache.get(key);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.user;
+  const q = new URLSearchParams({ u, p, v: "1.16.1", c: "chat-server", f: "json" });
+  const r = (await (await fetch(`${GONIC_URL}/rest/getUser.view?${q}`)).json())["subsonic-response"];
+  if (r.status !== "ok") return null;
+  const user = { name: r.user?.username || u, admin: !!r.user?.adminRole };
+  authCache.set(key, { user, at: Date.now() });
+  return user;
+}
+
 // ── Discogs album ratings ───────────────────────────────────────────────
 // Discogs rates releases (specific pressings), never albums, so an album's
 // rating is the vote-weighted mean over the most-collected releases of its
@@ -179,8 +198,8 @@ async function getRating(artist, album, force = false) {
 
 // ── Scrobbles ───────────────────────────────────────────────────────────
 // The app's own scrobbler (replaces Last.fm): rows in ClickHouse
-// music.scrobbles (ts DateTime, artist, album, track, mbid), all lowercase to
-// match the library's tags. Talks to ClickHouse's HTTP interface — no client lib.
+// music.scrobbles (ts DateTime, artist, album, track, mbid, username), all
+// lowercase to match the library's tags. Every read is scoped to one username. Talks to ClickHouse's HTTP interface — no client lib.
 const CLICKHOUSE_URL = process.env.CLICKHOUSE_URL;
 const CLICKHOUSE_AUTH =
   "Basic " + Buffer.from(`${process.env.CLICKHOUSE_USER || "default"}:${process.env.CLICKHOUSE_PASSWORD || ""}`).toString("base64");
@@ -211,11 +230,11 @@ const STATS_GROUPS = {
 };
 const CHRONOLOGICAL = ["year", "month"];
 
-async function scrobbleStats({ by = "artist", year, artist, limit = 20 } = {}) {
+async function scrobbleStats({ by = "artist", year, artist, limit = 20 } = {}, username) {
   const group = STATS_GROUPS[by];
   if (!group) throw Object.assign(new Error(`by must be one of: ${Object.keys(STATS_GROUPS).join(", ")}`), { status: 400 });
-  const where = [];
-  const params = {};
+  const where = ["username = {username:String}"];
+  const params = { username };
   if (year) {
     where.push("toYear(ts) = {year:UInt16}");
     params.year = parseInt(year, 10);
@@ -227,7 +246,7 @@ async function scrobbleStats({ by = "artist", year, artist, limit = 20 } = {}) {
   const n = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 200);
   const sql =
     `SELECT ${group}, toUInt32(count()) AS plays FROM music.scrobbles` +
-    (where.length ? ` WHERE ${where.join(" AND ")}` : "") +
+    ` WHERE ${where.join(" AND ")}` +
     ` GROUP BY ${CHRONOLOGICAL.includes(by) ? by : group}` +
     ` ORDER BY ${CHRONOLOGICAL.includes(by) ? by : "plays DESC"} LIMIT ${n} FORMAT JSON`;
   return JSON.parse(await clickhouse(sql, undefined, params)).data;
@@ -376,7 +395,7 @@ async function callModel(messages, provider) {
   return { content };
 }
 
-async function runChat(message, provider) {
+async function runChat(message, provider, username) {
   const messages = [{ role: "user", content: message }];
   const found = { songs: new Map(), albums: new Map(), artists: new Map() };
   // ids the model picked via show_songs; null means it never called it
@@ -415,7 +434,7 @@ async function runChat(message, provider) {
       }
       if (use.name === "scrobble_stats") {
         try {
-          const rows = await scrobbleStats(use.input ?? {});
+          const rows = await scrobbleStats(use.input ?? {}, username);
           toolResults.push({ type: "tool_result", tool_use_id: use.id, content: JSON.stringify(rows) });
         } catch (err) {
           toolResults.push({ type: "tool_result", tool_use_id: use.id, content: err.message, is_error: true });
@@ -448,7 +467,7 @@ async function runChat(message, provider) {
   return result("Found some results, but stopped after a few search rounds.");
 }
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/providers") {
     const list = PROVIDERS.map((p) => ({ id: p.id, label: p.label || p.id }));
     res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(list));
@@ -463,9 +482,18 @@ const server = createServer((req, res) => {
     json(424, { error: err.message });
   };
 
+  let me;
+  try {
+    me = await whoami(req);
+  } catch (err) {
+    return upstreamError(err);
+  }
+  const needsUser = url.pathname === "/chat" || url.pathname.startsWith("/scrobbles");
+  if (needsUser && !me) return json(401, { error: "login required" });
+
   if (url.pathname === "/scrobbles/stats" && req.method === "GET") {
     const q = Object.fromEntries(url.searchParams);
-    scrobbleStats(q).then(
+    scrobbleStats(q, me.name).then(
       (rows) => json(200, rows),
       (err) => (err.status === 400 ? json(400, { error: err.message }) : upstreamError(err)),
     );
@@ -476,7 +504,9 @@ const server = createServer((req, res) => {
     if (req.method === "GET") {
       const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit"), 10) || 5, 1), 100);
       clickhouse(
-        `SELECT toUnixTimestamp(ts) AS uts, artist, album, track FROM music.scrobbles ORDER BY ts DESC LIMIT ${limit} FORMAT JSON`,
+        `SELECT toUnixTimestamp(ts) AS uts, artist, album, track FROM music.scrobbles WHERE username = {username:String} ORDER BY ts DESC LIMIT ${limit} FORMAT JSON`,
+        undefined,
+        { username: me.name },
       ).then((text) => json(200, JSON.parse(text).data), upstreamError);
       return;
     }
@@ -500,6 +530,7 @@ const server = createServer((req, res) => {
           artist: artist.toLowerCase(),
           album: album.toLowerCase(),
           track: track.toLowerCase(),
+          username: me.name,
         };
         clickhouse("INSERT INTO music.scrobbles FORMAT JSONEachRow", JSON.stringify(row)).then(
           () => json(201, row),
@@ -513,6 +544,7 @@ const server = createServer((req, res) => {
   if (url.pathname === "/ratings") {
     if (req.method === "GET") return json(200, ratings);
     if (req.method === "POST") {
+      if (!me?.admin) return json(403, { error: "admin only" });
       const artist = url.searchParams.get("artist");
       const album = url.searchParams.get("album");
       if (!artist || !album) return json(400, { error: "artist and album are required" });
@@ -548,7 +580,7 @@ const server = createServer((req, res) => {
         res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ error: `unknown provider "${providerId}"` }));
         return;
       }
-      const result = await runChat(message, provider);
+      const result = await runChat(message, provider, me.name);
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
     } catch (err) {
       console.error(err);
