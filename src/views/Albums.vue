@@ -207,7 +207,7 @@
       <div class="flex-1 min-h-0 overflow-y-auto px-4 py-4 pb-40 md:pb-24">
         <div v-if="loading" class="flex items-center justify-center py-24 text-stone-600 text-sm">Loading…</div>
         <div v-else>
-          <div class="flex gap-4 mb-6 items-end">
+          <div class="flex gap-4 mb-4">
             <div class="w-28 h-28 flex-shrink-0 bg-amber-50 overflow-hidden rounded-lg shadow-md relative group/cover">
               <div class="w-full h-full flex items-center justify-center text-4xl">💿</div>
               <img v-if="albumDetailCoverSrc && albumDetailCoverState !== 'failed'"
@@ -226,21 +226,20 @@
                 <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </button>
             </div>
-            <div class="flex-1 overflow-hidden">
-              <div class="text-xs uppercase tracking-widest text-stone-600 mb-1">
-                {{ ['Album', displayYear].filter(Boolean).join(' · ') }}<span v-if="displayGenre"> · {{ displayGenre }}</span>
-              </div>
-              <AlbumRating :album="currentAlbum" full :save-genre="saveFetchedGenre" />
-              <div class="font-serif text-xl font-semibold leading-tight mb-0.5">{{ displayTitle }}</div>
-              <div class="text-sm text-stone-600 mb-3 truncate">
+            <div class="flex-1 overflow-hidden flex flex-col gap-1 text-sm text-stone-600">
+              <div class="truncate">
                 <button class="hover:text-amber-700 transition-colors" @click="openArtistByName(displayArtist, $event)">{{ displayArtist }}</button>
               </div>
-              <div class="flex gap-2">
-                <button class="bg-stone-900 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
-                <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
-                <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download selected tracks, or the whole album, as a zip" @click="downloadAlbumOrSelected"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" /></svg>{{ selectedIds.length ? `Download (${selectedIds.length})` : 'Download' }}</button>
-              </div>
+              <div v-if="displayYear">{{ displayYear }}</div>
+              <div v-if="displayGenre">{{ displayGenre }}</div>
+              <AlbumRating :album="currentAlbum" full />
             </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 mb-6">
+            <button class="bg-stone-900 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
+            <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" @click="queueAlbumTracks">+ Queue</button>
+            <button class="border border-stone-200 text-xs px-4 py-2 rounded-full hover:border-amber-700 hover:text-amber-700 transition-colors" title="Download selected tracks, or the whole album, as a zip" @click="downloadAlbumOrSelected"><svg class="w-3.5 h-3.5 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" /></svg>{{ selectedIds.length ? `Download (${selectedIds.length})` : 'Download' }}</button>
+            <AlbumRating :album="currentAlbum" fix :save-genre="saveFetchedGenre" />
           </div>
 
           <div v-if="showLocation && albumPath" class="mb-6 px-4 py-3 bg-stone-100 rounded-lg border border-stone-200 flex flex-col gap-1.5 animate-in fade-in slide-in-from-top-2 duration-200">

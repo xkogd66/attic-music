@@ -1,18 +1,20 @@
 <template>
-  <!-- detail header: rating link (or a fetch button when none is stored yet) -->
-  <div v-if="full && album" class="text-xs text-stone-600 mb-1 flex items-center gap-2 flex-wrap">
+  <!-- detail header: rating line (font set by the parent) -->
+  <div v-if="full && album" class="flex items-center gap-2 flex-wrap">
     <a v-if="r?.rating" :href="r.url" target="_blank" rel="noopener" class="hover:text-amber-700 transition-colors" :title="title">
       <span class="text-amber-700">★ {{ r.rating.toFixed(1) }}</span> · {{ r.votes.toLocaleString() }} votes on Discogs
     </a>
     <span v-else-if="r" class="text-stone-500" :title="r.matched">No ratings on Discogs</span>
+  </div>
+  <!-- fix metadata button, sized like the Play / Queue / Download pills -->
+  <div v-else-if="fix && album" class="flex items-center gap-2 flex-wrap">
     <button
-      v-if="saveGenre"
-      class="bg-amber-700 text-white font-medium px-2.5 py-0.5 rounded-full hover:bg-amber-800 transition-colors disabled:opacity-50"
+      class="bg-amber-700 text-white text-xs font-medium px-4 py-2 rounded-full hover:bg-amber-800 transition-colors disabled:opacity-50"
       :disabled="busy"
       title="Overwrite genre (Discogs style), Discogs rating and earliest release year (MusicBrainz)"
       @click="fetchAll"
     >{{ busy ? 'Fetching…' : 'fix metadata' }}</button>
-    <span v-for="m in msgs" :key="m.text" :class="m.error ? 'text-red-600' : 'text-stone-500'">{{ m.text }}</span>
+    <span v-for="m in msgs" :key="m.text" class="text-xs" :class="m.error ? 'text-red-600' : 'text-stone-500'">{{ m.text }}</span>
   </div>
   <!-- cards and lists -->
   <span v-else-if="!full && r?.rating" class="text-amber-700" :title="title">{{ (bare ? '★ ' : ' · ★ ') + r.rating.toFixed(1) }}</span>
@@ -26,9 +28,9 @@ import { startEnrich, getJob } from '../api/maintenance'
 
 // The stored Discogs rating for a subsonic album object. Compact " · ★ 4.3" for
 // cards and lists (`bare` drops the leading dot, for a line of its own); `full`
-// is the detail-header line, which also has the button that fetches it.
-// saveGenre(genre): the album view's writer (tags to disk + local override); only used with `full`.
-const props = defineProps({ album: { type: Object, default: null }, full: Boolean, bare: Boolean, saveGenre: Function })
+// is the detail-header rating line; `fix` is the "fix metadata" button alone.
+// saveGenre(genre): the album view's writer (tags to disk + local override); required with `fix`.
+const props = defineProps({ album: { type: Object, default: null }, full: Boolean, bare: Boolean, fix: Boolean, saveGenre: Function })
 
 const ratings = useRatingsStore()
 ratings.load()
