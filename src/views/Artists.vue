@@ -274,7 +274,7 @@
               Edit
             </button>
             <button
-              v-if="albumPath"
+              v-if="config.isAdmin && albumPath"
               class="flex-shrink-0 inline-flex items-center gap-1 border border-stone-300 text-stone-600 text-xs px-2.5 py-1 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
               title="Show file location"
               @click="showLocation = !showLocation"

@@ -504,7 +504,9 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET") {
       const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit"), 10) || 5, 1), 100);
       clickhouse(
-        `SELECT toUnixTimestamp(ts) AS uts, artist, album, track FROM music.scrobbles WHERE username = {username:String} ORDER BY ts DESC LIMIT ${limit} FORMAT JSON`,
+        // Lazy materialization (top-N read path) fails on ClickHouse 25.8 here with
+        // Code 352 "Block structure mismatch", since the username filter was added.
+        `SELECT toUnixTimestamp(ts) AS uts, artist, album, track FROM music.scrobbles WHERE username = {username:String} ORDER BY ts DESC LIMIT ${limit} SETTINGS query_plan_optimize_lazy_materialization = 0 FORMAT JSON`,
         undefined,
         { username: me.name },
       ).then((text) => json(200, JSON.parse(text).data), upstreamError);
