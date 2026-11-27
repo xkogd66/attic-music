@@ -90,7 +90,7 @@ Use this to find code without searching.
 2. `App.vue` `onMounted`: `config.load()` → `autoLogin()` → `ready = true`. Nothing renders before `ready`.
 3. `config.load()` fetches `/config.json` (written by CI: `server`, `username`) and deletes the legacy `localStorage.attic_cfg`.
 4. **Credentials are memory-only** (`config` store: `server`, `username`, `password`, `isAdmin`, `loggedIn`). Every reload/new tab re-logs in.
-5. `Login.vue`: `login()` sets config, runs gonic `getUser()` (proves the credentials and returns `adminRole`), then `saveSession(adminRole)` (`isAdmin`, `loggedIn = true`) and pushes `/`. Failure → message.
+5. `Login.vue` asks only for username and password; the server is always `config.json`'s `server`. `login()` sets config, runs gonic `getUser()` (proves the credentials and returns `adminRole`), then `saveSession(adminRole)` (`isAdmin`, `loggedIn = true`) and pushes `/`. Failure → message.
 6. `router.beforeEach`: anything but `login` redirects to `login` while `!loggedIn`; `/tools` redirects to `/home` unless `isAdmin`.
 6a. **Users and admin**: accounts live in gonic (created/deleted and admin-flagged on gonic's admin page). Non-admins get no Tools nav/route, no rescan button, no tag Edit / track edit, no cover or avatar change, no "fix metadata". That is only UI; enforcement is server-side: calls that need a user send `authHeaders()` (`X-Auth-User`, `X-Auth-Pass: enc:<hex>`, from `api/subsonic.js`), and the sidecar (every non-GET) and chat-server (`POST /ratings`) refuse non-admins after checking those with gonic `getUser` (valid answers cached 5 min).
 7. `App.vue` renders the library layout only when `loggedIn`; logged out, the `<RouterView>` (Login) is the whole tree.

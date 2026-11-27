@@ -6,10 +6,6 @@
 
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-medium uppercase tracking-widest text-stone-600 mb-1.5">Server URL</label>
-          <input v-model="form.server" class="input" placeholder="https://gonic.example.com" @keyup.enter="login" />
-        </div>
-        <div>
           <label class="block text-xs font-medium uppercase tracking-widest text-stone-600 mb-1.5">Username</label>
           <input v-model="form.username" class="input" autocomplete="username" @keyup.enter="login" />
         </div>
@@ -54,13 +50,11 @@ const canRemember = !!window.attic?.saveCredentials
 const remember    = ref(true)
 
 const form = reactive({
-  server:   '',
   username: '',
   password: '',
 })
 
 onMounted(() => {
-  form.server   = config.server
   form.username = config.username
   form.password = config.password
 })
@@ -69,7 +63,6 @@ async function login() {
   error.value   = ''
   logging.value = true
   try {
-    config.server   = form.server.replace(/\/$/, '')
     config.username = form.username
     config.password = form.password
     const user = await getUser()
