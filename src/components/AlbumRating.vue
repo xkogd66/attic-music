@@ -7,11 +7,11 @@
     <span v-else-if="r" class="text-stone-500" :title="r.matched">No ratings on Discogs</span>
     <button
       v-if="saveGenre"
-      class="border border-stone-300 text-stone-600 px-2.5 py-0.5 rounded-full hover:border-amber-700 hover:text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+      class="bg-amber-700 text-white font-medium px-2.5 py-0.5 rounded-full hover:bg-amber-800 transition-colors disabled:opacity-50"
       :disabled="busy"
       title="Overwrite genre (Discogs style), Discogs rating and earliest release year (MusicBrainz)"
       @click="fetchAll"
-    >{{ busy ? 'Fetching…' : 'discogs' }}</button>
+    >{{ busy ? 'Fetching…' : 'fix metadata' }}</button>
     <span v-for="m in msgs" :key="m.text" :class="m.error ? 'text-red-600' : 'text-stone-500'">{{ m.text }}</span>
   </div>
   <!-- cards and lists -->
