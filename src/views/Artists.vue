@@ -314,7 +314,7 @@
               </div>
               <div class="font-serif text-3xl font-semibold mb-1.5">{{ displayTitle }}</div>
               <div class="text-sm text-stone-600 mb-1">{{ displayArtist }}</div>
-              <AlbumRating :album="currentAlbum" full :save-genre="saveFetchedGenre" />
+              <AlbumRating :album="currentAlbum" full />
               <div class="mb-3"></div>
               <div class="flex gap-2.5">
                 <button class="bg-stone-900 text-white text-sm font-medium px-5 py-2 hover:bg-amber-700 transition-colors" @click="playAlbumTracks">▶ Play</button>
@@ -797,15 +797,6 @@ async function saveTagEdits() {
   closeTagEditor()
 }
 
-// Discogs style button: write it as the genre (same path as a tag edit), then the local override.
-async function saveFetchedGenre(genre) {
-  const id = currentAlbum.value?.id
-  if (!id) return
-  const { artist, album } = albumDiskIdentity()
-  await saveAlbumTags(artist, album, albumPath.value, { genre })
-  try { localStorage.setItem(TAGS_PREFIX + id, JSON.stringify({ ...readAlbumTags(id), genre, _diskArtist: artist, _diskAlbum: album })) } catch {}
-  tagsVersion.value++
-}
 
 function openTrackEditor(track) {
   editingTrack = track
